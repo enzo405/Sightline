@@ -67,6 +67,12 @@ export function save(): void {
   try { localStorage.setItem(KEY, JSON.stringify(progress())); } catch { /* storage full/blocked */ }
 }
 
+/** Wipe all stored practice data back to a clean slate. */
+export function resetProgress(): void {
+  data = blank();
+  try { localStorage.removeItem(KEY); } catch { /* storage blocked */ }
+}
+
 export function today(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

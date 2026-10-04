@@ -212,6 +212,10 @@ const EN: Dict = {
   'settings.midi': 'MIDI keyboard',
   'settings.on': 'On',
   'settings.off': 'Off',
+  'settings.data': 'Your data',
+  'settings.dataHint': 'All practice history and settings live only in this browser. Nothing is sent anywhere.',
+  'settings.reset': 'Reset all my data',
+  'settings.resetConfirm': 'Erase all practice history, progress and settings on this device? This cannot be undone.',
 
   // Progress
   'progress.title': 'Your skill map',
@@ -413,6 +417,10 @@ const FR: Dict = {
   'settings.midi': 'Clavier MIDI',
   'settings.on': 'Activé',
   'settings.off': 'Désactivé',
+  'settings.data': 'Vos données',
+  'settings.dataHint': 'Tout votre historique et vos réglages restent dans ce navigateur. Rien n’est envoyé ailleurs.',
+  'settings.reset': 'Réinitialiser mes données',
+  'settings.resetConfirm': 'Effacer tout l’historique, la progression et les réglages sur cet appareil ? Action irréversible.',
 
   // Progression
   'progress.title': 'Votre carte de compétences',

@@ -139,6 +139,10 @@ input[type="number"]:focus, select:focus {
 }
 .btn.primary:hover { filter: brightness(1.08); box-shadow: 0 4px 16px rgba(57,135,229,0.45); }
 .btn:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
+.btn.danger {
+  background: transparent; border-color: var(--bad); color: var(--bad);
+}
+.btn.danger:hover { background: var(--bad); border-color: var(--bad); color: #fff; }
 .btn.recording {
   background: var(--bad); border-color: var(--bad); color: #fff;
   box-shadow: 0 0 0 0 rgba(208,59,59,0.6); animation: pulse 1.4s infinite;

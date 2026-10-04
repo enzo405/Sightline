@@ -46,3 +46,10 @@ export function onSettingsChange(fn: (s: Settings) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
+
+/** Restore all preferences to defaults and forget stored settings. */
+export function resetSettings(): void {
+  current = { ...DEFAULTS };
+  try { localStorage.removeItem(STORE_KEY); } catch { /* storage blocked */ }
+  for (const fn of [...listeners]) fn(current);
+}

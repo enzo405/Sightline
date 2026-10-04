@@ -3,7 +3,8 @@
 
 import { lang, setLang, t } from './i18n';
 import { initMidi, midiSupported, MidiStatus, onMidiStatus } from './midi';
-import { onSettingsChange, settings, updateSettings } from './settings';
+import { resetProgress } from './progress';
+import { onSettingsChange, resetSettings, settings, updateSettings } from './settings';
 import { unlockAudio } from './synth';
 
 export function mountSettings(el: HTMLElement): () => void {
@@ -42,6 +43,12 @@ export function mountSettings(el: HTMLElement): () => void {
         <h3>${t('settings.midi')}</h3>
         <p class="muted" id="set-midi-status"></p>
         <button class="btn primary" id="set-midi-btn"></button>
+      </section>
+
+      <section class="panel">
+        <h3>${t('settings.data')}</h3>
+        <p class="muted">${t('settings.dataHint')}</p>
+        <button class="btn danger" id="set-reset">${t('settings.reset')}</button>
       </section>
     </div>
   `;
@@ -96,6 +103,16 @@ export function mountSettings(el: HTMLElement): () => void {
   }
   const offMidi = onMidiStatus(renderMidi);
   midiBtn.addEventListener('click', () => { unlockAudio(); void initMidi(); });
+
+  // --- reset all data ---
+  const resetBtn = el.querySelector('#set-reset') as HTMLButtonElement;
+  resetBtn.addEventListener('click', () => {
+    if (!confirm(t('settings.resetConfirm'))) return;
+    resetProgress();
+    resetSettings();
+    // Full reload gives every module a clean, freshly-loaded state.
+    location.reload();
+  });
 
   // keep the switch/volume in sync if changed elsewhere
   const offSettings = onSettingsChange((next) => {
