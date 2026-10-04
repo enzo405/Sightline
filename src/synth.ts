@@ -47,7 +47,9 @@ function makeImpulse(ac: AudioContext, seconds: number, decay: number): AudioBuf
 
 function audio(): AudioContext {
   if (!ctx) {
-    ctx = new AudioContext();
+    // 'interactive' asks the browser for the smallest output buffer it can
+    // manage, which minimizes the delay between a MIDI note-on and its sound.
+    ctx = new AudioContext({ latencyHint: 'interactive' });
     master = ctx.createGain();
     master.gain.value = masterVolume;
     const comp = ctx.createDynamicsCompressor();
