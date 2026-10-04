@@ -1,8 +1,0 @@
-services:
-  sightline:
-    image: registry.luhcaran.fr/sightline:0.1.0
-    build: .
-    container_name: sightline
-    ports:
-      - "8080:80"
-    restart: unless-stopped
