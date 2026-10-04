@@ -175,6 +175,10 @@ export function mountProgress(root: HTMLElement): () => void {
         <h3>${t('progress.techniqueTitle')}</h3>
         <div id="pg-technique"></div>
       </div>
+      <div class="panel">
+        <h3>${t('progress.earTitle')}</h3>
+        <div id="pg-ear"></div>
+      </div>
     </div>
   `;
 
@@ -230,6 +234,17 @@ export function mountProgress(root: HTMLElement): () => void {
         return `<div class="tile"><div class="tile-num">${v.bestNpm}<span class="tile-sub"> n/min</span></div><div class="tile-label">${label}</div></div>`;
       }).join('') + `</div>`
     : `<p class="muted">${t('progress.techniqueEmpty')}</p>`;
+
+  const earModeLabel: Record<string, string> = {
+    intervals: t('ear.mode.intervals'), chords: t('ear.mode.chords'), dictation: t('ear.mode.dictation'),
+  };
+  const earEntries = Object.entries(p.ear).filter(([, v]) => v.attempts > 0);
+  (root.querySelector('#pg-ear') as HTMLElement).innerHTML = earEntries.length
+    ? `<div class="stat-row">` + earEntries.map(([id, v]) => {
+        const acc = Math.round((v.correct / v.attempts) * 100);
+        return `<div class="tile"><div class="tile-num">${acc}%<span class="tile-sub"> · ${v.bestStreak}🔥</span></div><div class="tile-label">${earModeLabel[id] ?? id}</div></div>`;
+      }).join('') + `</div>`
+    : `<p class="muted">${t('progress.earEmpty')}</p>`;
 
   return () => hideTip();
 }

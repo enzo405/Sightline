@@ -34,6 +34,7 @@ export interface ProgressData {
   fading: Record<string, { level: number; completions: number }>;
   improv: { sessions: ImprovSession[]; callResponse: CallResponseRecord[] };
   technique: Record<string, { bestNpm: number; attempts: number; cleanRuns: number }>;
+  ear: Record<string, { attempts: number; correct: number; bestStreak: number }>;
   totals: { notesPlayed: number; days: Record<string, number> };
 }
 
@@ -45,6 +46,7 @@ function blank(): ProgressData {
     fading: {},
     improv: { sessions: [], callResponse: [] },
     technique: {},
+    ear: {},
     totals: { notesPlayed: 0, days: {} },
   };
 }
@@ -109,6 +111,17 @@ export function recordTechnique(id: string, notesPerMin: number, clean: boolean)
   p.technique[id] = entry;
   save();
   return newBest;
+}
+
+/** Record one ear-training answer. `streak` is the player's current run of correct answers. */
+export function recordEar(mode: string, correct: boolean, streak: number): void {
+  const p = progress();
+  const e = p.ear[mode] ?? { attempts: 0, correct: 0, bestStreak: 0 };
+  e.attempts++;
+  if (correct) e.correct++;
+  if (streak > e.bestStreak) e.bestStreak = streak;
+  p.ear[mode] = e;
+  save();
 }
 
 export function streakDays(): number {

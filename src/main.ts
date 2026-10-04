@@ -3,6 +3,7 @@
 import './style.css';
 import { input } from './events';
 import { mountFading } from './fading';
+import { mountEar } from './eartraining';
 import { lang, onLangChange, setLang, t } from './i18n';
 import { mountImprov } from './improv';
 import { createKeyboard, Keyboard } from './keyboard';
@@ -50,6 +51,7 @@ const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => vo
   { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
   { id: 'improv', labelKey: 'tab.improv', mount: (el) => mountImprov(el, keyboard) },
   { id: 'technique', labelKey: 'tab.technique', mount: mountTechnique },
+  { id: 'ear', labelKey: 'tab.ear', mount: mountEar },
   { id: 'progress', labelKey: 'tab.progress', mount: mountProgress },
   { id: 'settings', labelKey: 'tab.settings', mount: mountSettings },
 ];

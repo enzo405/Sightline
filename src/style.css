@@ -127,6 +127,16 @@ main {
 }
 .tutorial li { margin: 4px 0; }
 
+/* Ear Training (eartraining.ts) */
+.ear-panel { margin-bottom: 14px; }
+.ear-answers { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.ear-opt { min-width: 92px; }
+.ear-opt.ans-correct { background: var(--good); border-color: var(--good); color: #fff; opacity: 1; }
+.ear-opt.ans-wrong { background: var(--bad); border-color: var(--bad); color: #fff; opacity: 1; }
+.ear-feedback { min-height: 20px; margin: 4px 0 0; font-weight: 600; }
+.ear-feedback.good { color: var(--good); }
+.ear-feedback.bad { color: var(--bad); }
+
 .toolbar {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 10px 12px;
