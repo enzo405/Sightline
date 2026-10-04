@@ -120,6 +120,7 @@ const EN: Dict = {
   'fade.title': 'Fading Score',
   'fade.intro': 'Pick a piece you know by ear. Level 1 shows every hint; each pass at <b>≥90% accuracy</b> fades one layer — first note names, then fingering, then whole bars go blank (play them from memory: the notes reappear as you get them right). This trains reading ahead and playing through instead of stopping at every bar.',
   'fade.piece': 'Piece',
+  'fade.etudeGroup': 'Finger études (random)',
   'fade.stage': 'Stage',
   'fade.restart': 'Restart piece',
   'fade.again': 'Play again →',
@@ -181,6 +182,8 @@ const EN: Dict = {
   'piece.mary': 'Mary Had a Little Lamb',
   'piece.auclair': 'Au clair de la lune',
   'piece.lightly-row': 'Lightly Row',
+  'piece.etude-easy': 'Finger étude — easy (random)',
+  'piece.etude-hard': 'Finger étude — hard (random)',
 
   // Technique
   'tech.title': 'Technique Trainer',
@@ -376,6 +379,7 @@ const FR: Dict = {
   'fade.title': 'Partition qui s’efface',
   'fade.intro': 'Choisissez un morceau que vous connaissez d’oreille. Le niveau 1 montre tous les indices ; chaque passage à <b>≥90 % de précision</b> efface une couche — d’abord les noms de notes, puis les doigtés, puis des mesures entières deviennent vides (jouez-les de mémoire : les notes réapparaissent quand vous les réussissez). Cela entraîne la lecture en avance et le jeu continu plutôt que l’arrêt à chaque mesure.',
   'fade.piece': 'Morceau',
+  'fade.etudeGroup': 'Études de doigté (aléatoire)',
   'fade.stage': 'Étape',
   'fade.restart': 'Recommencer le morceau',
   'fade.again': 'Rejouer →',
@@ -437,6 +441,8 @@ const FR: Dict = {
   'piece.mary': 'Mary Had a Little Lamb',
   'piece.auclair': 'Au clair de la lune',
   'piece.lightly-row': 'Lightly Row',
+  'piece.etude-easy': 'Étude de doigté — facile (aléatoire)',
+  'piece.etude-hard': 'Étude de doigté — difficile (aléatoire)',
 
   // Technique
   'tech.title': 'Entraînement technique',

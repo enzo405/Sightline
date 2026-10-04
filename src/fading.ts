@@ -7,6 +7,7 @@ import { t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { pieceScore, PIECES, pieceTitle } from './pieces';
+import { ETUDE_IDS, generateEtude, isEtude } from './etudes';
 import { countNotes, progress, save } from './progress';
 import { PlayThrough } from './playthrough';
 
@@ -42,7 +43,12 @@ export function mountFading(root: HTMLElement): () => void {
     </div>
     <div class="toolbar">
       <label>${t('fade.piece')}
-        <select id="fd-piece">${PIECES.map((p) => `<option value="${p.id}">${pieceTitle(p.id)}</option>`).join('')}</select>
+        <select id="fd-piece">
+          ${PIECES.map((p) => `<option value="${p.id}">${pieceTitle(p.id)}</option>`).join('')}
+          <optgroup label="${t('fade.etudeGroup')}">
+            ${ETUDE_IDS.map((id) => `<option value="${id}">${t(`piece.${id}`)}</option>`).join('')}
+          </optgroup>
+        </select>
       </label>
       <span class="level-badge">${t('fade.stage')} <b id="fd-level"></b>/5</span>
       <button id="fd-restart" class="btn primary">${t('fade.restart')}</button>
@@ -73,7 +79,7 @@ export function mountFading(root: HTMLElement): () => void {
     const id = pieceEl.value;
     const lvlIdx = pieceLevel(id);
     const fade = FADE_LEVELS[lvlIdx];
-    const score = pieceScore(id);
+    const score = isEtude(id) ? generateEtude(id) : pieceScore(id);
     const hidden = fade.hide(score.measures.length);
     levelEl.textContent = String(lvlIdx + 1);
     descEl.textContent = t(fade.labelKey);
