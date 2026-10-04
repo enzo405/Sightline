@@ -78,6 +78,11 @@ interface Handle { stop: () => void }
 
 const active = new Map<number, Handle>();
 
+// Sustain pedal (MIDI CC64): while down, released keys keep ringing until the
+// pedal lifts. `sustained` holds notes whose key is up but the pedal is holding.
+let sustainOn = false;
+const sustained = new Set<number>();
+
 // Relative amplitude of each harmonic partial (1st = fundamental).
 const PARTIAL_AMPS = [1, 0.62, 0.45, 0.30, 0.18, 0.11, 0.07];
 // Two unison voices: the main one is full; the detuned one carries only the
@@ -161,13 +166,28 @@ export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: num
     release(t + durSec);
   } else {
     active.get(midi)?.stop();
+    sustained.delete(midi); // re-struck: no longer just pedal-held
     active.set(midi, { stop: () => release(ac.currentTime) });
   }
 }
 
 export function pianoOff(midi: number): void {
+  if (sustainOn) { sustained.add(midi); return; } // hold under the pedal
   active.get(midi)?.stop();
   active.delete(midi);
+}
+
+/** Sustain pedal state (MIDI CC64). Lifting it releases all pedal-held notes. */
+export function setSustain(on: boolean): void {
+  if (on === sustainOn) return;
+  sustainOn = on;
+  if (!on) {
+    for (const m of sustained) {
+      active.get(m)?.stop();
+      active.delete(m);
+    }
+    sustained.clear();
+  }
 }
 
 /** Short metronome click. Accented beats get a higher pitch. */

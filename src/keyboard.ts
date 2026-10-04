@@ -7,8 +7,8 @@ import { input } from './events';
 import { noteName } from './i18n';
 import { pianoOn, pianoOff } from './synth';
 
-const LOW = 36;  // C2
-const HIGH = 96; // C7
+const LOW = 21;  // A0 — full 88-key piano, 7+ octaves
+const HIGH = 108; // C8
 
 const KBD_MAP: Record<string, number> = {
   // Ableton-style: a = C4 ... ; = E5
