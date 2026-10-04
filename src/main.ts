@@ -2,6 +2,7 @@
 
 import './style.css';
 import { input } from './events';
+import { mountDaily } from './daily';
 import { mountFading } from './fading';
 import { mountEar } from './eartraining';
 import { lang, onLangChange, setLang, t } from './i18n';
@@ -46,6 +47,7 @@ applyAudioSettings();
 onSettingsChange(applyAudioSettings);
 
 const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => void }[] = [
+  { id: 'daily', labelKey: 'tab.daily', mount: mountDaily },
   { id: 'mirror', labelKey: 'tab.mirror', mount: mountMirror },
   { id: 'read', labelKey: 'tab.read', mount: mountSightread },
   { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
@@ -148,7 +150,7 @@ onLangChange(() => {
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 
-show('mirror');
+show('daily');
 
 // Test hook: lets automated checks (and curious users) inject notes.
 (window as any).__sightline = {

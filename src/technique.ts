@@ -10,8 +10,8 @@ import { PlayThrough } from './playthrough';
 import { countNotes, progress, recordTechnique } from './progress';
 import { KEYS, midiFromPc } from './theory';
 
-type ExType = 'five-major' | 'five-minor' | 'scale-major' | 'arpeggio-major';
-type Hand = 'right' | 'left';
+export type ExType = 'five-major' | 'five-minor' | 'scale-major' | 'arpeggio-major';
+export type Hand = 'right' | 'left';
 
 // Roots we have confident, standard one-octave fingering for.
 const ROOTS = ['C', 'G', 'D', 'A', 'E', 'F'];
@@ -70,6 +70,13 @@ function toScore(seq: Cell[], key: string, clef: 'treble' | 'bass'): Score {
     measures.push({ treble });
   }
   return { measures, key, clef };
+}
+
+/** Public: full notated drill (ascending+descending, standard fingering) for
+ *  reuse outside the Technique room — e.g. the 30-day daily program. */
+export function buildTechniqueScore(type: ExType, root: string, hand: Hand): Score {
+  const clef: 'treble' | 'bass' = hand === 'right' ? 'treble' : 'bass';
+  return toScore(buildSequence(type, root, hand), root, clef);
 }
 
 export function mountTechnique(root: HTMLElement): () => void {
@@ -135,9 +142,7 @@ export function mountTechnique(root: HTMLElement): () => void {
     const type = typeEl.value as ExType;
     const rootKey = rootEl.value;
     const hand = handEl.value as Hand;
-    const clef: 'treble' | 'bass' = hand === 'right' ? 'treble' : 'bass';
-    const seq = buildSequence(type, rootKey, hand);
-    const score = toScore(seq, rootKey, clef);
+    const score = buildTechniqueScore(type, rootKey, hand);
     const stream = mainStream(score);
     liveEl.textContent = t('read.noteCount', { n: 1, total: stream.length });
 

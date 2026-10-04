@@ -35,6 +35,7 @@ export interface ProgressData {
   improv: { sessions: ImprovSession[]; callResponse: CallResponseRecord[] };
   technique: Record<string, { bestNpm: number; attempts: number; cleanRuns: number }>;
   ear: Record<string, { attempts: number; correct: number; bestStreak: number }>;
+  daily: { done: Record<number, string> }; // day 1..30 -> ISO completion date
   totals: { notesPlayed: number; days: Record<string, number> };
 }
 
@@ -47,6 +48,7 @@ function blank(): ProgressData {
     improv: { sessions: [], callResponse: [] },
     technique: {},
     ear: {},
+    daily: { done: {} },
     totals: { notesPlayed: 0, days: {} },
   };
 }
@@ -122,6 +124,26 @@ export function recordEar(mode: string, correct: boolean, streak: number): void 
   if (streak > e.bestStreak) e.bestStreak = streak;
   p.ear[mode] = e;
   save();
+}
+
+/** Mark a day of the 30-day program complete (first completion wins the date). */
+export function markDailyDone(day: number): void {
+  const p = progress();
+  if (!p.daily.done[day]) {
+    p.daily.done[day] = new Date().toISOString();
+    save();
+  }
+}
+
+/** How many of the 30 days are finished. */
+export function dailyDoneCount(): number {
+  return Object.keys(progress().daily.done).length;
+}
+
+/** Highest completed day number (0 if none) — the next day is this + 1. */
+export function dailyHighestDone(): number {
+  const keys = Object.keys(progress().daily.done).map(Number);
+  return keys.length ? Math.max(...keys) : 0;
 }
 
 export function streakDays(): number {

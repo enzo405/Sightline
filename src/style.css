@@ -377,3 +377,94 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .sparkle { display: none; }
 }
+
+/* ---------- 30-Day Journey ---------- */
+.btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); padding-left: 6px; padding-right: 6px; }
+.btn.ghost:hover { color: var(--ink); border-color: transparent; }
+.result-note.good { color: var(--good); font-weight: 600; }
+
+.daily-overview {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.daily-ring {
+  --pct: 0;
+  flex: 0 0 auto; width: 92px; height: 92px; border-radius: 50%;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(closest-side, var(--panel) 72%, transparent 73% 100%),
+    conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--line) 0);
+  transition: background 500ms var(--ease);
+}
+.daily-ring span { font-size: 24px; font-weight: 700; color: var(--ink); }
+.daily-ring small { font-size: 13px; color: var(--muted); font-weight: 500; }
+.daily-overview-text { flex: 1 1 220px; }
+.daily-overview-text h3 { margin: 0 0 4px; font-size: 17px; }
+.daily-overview-text p { margin: 0 0 12px; }
+
+.cal-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 10px; margin-bottom: 8px;
+}
+.cal-day {
+  position: relative; aspect-ratio: 1; border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--line); color: var(--ink-2); cursor: pointer;
+  display: grid; place-items: center; font-weight: 700; font-size: 20px;
+  transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease), background var(--ease);
+}
+.cal-day:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-2); }
+.cal-day .cal-num { line-height: 1; }
+.cal-day.done {
+  background: linear-gradient(180deg, rgba(12,163,12,0.22), rgba(12,163,12,0.08));
+  border-color: rgba(12,163,12,0.55); color: var(--ink);
+}
+.cal-day.current {
+  border-color: var(--accent); color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(57,135,229,0.35), 0 6px 18px rgba(57,135,229,0.25);
+  animation: cal-pulse 2.2s ease-in-out infinite;
+}
+@keyframes cal-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(57,135,229,0.30), 0 6px 18px rgba(57,135,229,0.20); }
+  50% { box-shadow: 0 0 0 3px rgba(57,135,229,0.55), 0 8px 24px rgba(57,135,229,0.38); }
+}
+.cal-day.locked { cursor: default; opacity: 0.5; }
+.cal-badge { position: absolute; top: 5px; right: 7px; font-size: 12px; font-weight: 400; }
+.cal-day.done .cal-badge { color: var(--good); font-weight: 700; }
+
+.daily-detail {
+  margin-top: 18px; padding: 16px; border-radius: var(--radius);
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-1);
+  animation: fade-in var(--ease);
+}
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.daily-detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.daily-detail-head h3 { margin: 0; font-size: 18px; }
+.daily-detail-head p { margin: 2px 0 0; font-size: 13px; }
+
+.task-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.task-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--ink-2); transition: border-color var(--ease), background var(--ease), opacity var(--ease);
+}
+.task-item .task-mark {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+}
+.task-item.active { border-color: var(--accent); background: rgba(57,135,229,0.08); color: var(--ink); }
+.task-item.active .task-mark { background: var(--accent-grad); border-color: transparent; color: #fff; }
+.task-item.done { color: var(--ink-2); }
+.task-item.done .task-mark { background: var(--good); border-color: transparent; color: #fff; }
+.task-item.pending { opacity: 0.7; }
+
+.daily-controls { margin-top: 12px; }
+.daily-done-banner {
+  text-align: center; padding: 18px; border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(12,163,12,0.16), rgba(57,135,229,0.10));
+  border: 1px solid rgba(12,163,12,0.4);
+}
+.daily-done-emoji { font-size: 40px; animation: pop 500ms var(--ease); }
+@keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.daily-done-banner p { margin: 6px 0 14px; font-size: 16px; color: var(--ink); }
+.daily-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
