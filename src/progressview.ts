@@ -7,7 +7,8 @@ import { FADE_LEVELS } from './fading';
 import { keyName, t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { PIECES, pieceTitle } from './pieces';
-import { progress, streakDays } from './progress';
+import { dailyDoneCount, progress, streakDays } from './progress';
+import { DAILY_TOTAL } from './curriculum';
 
 // reference palette, dark-surface steps
 const C = {
@@ -131,6 +132,7 @@ export function mountProgress(root: HTMLElement): () => void {
   const avgAcc = last10.length ? Math.round((last10.reduce((s, r) => s + r.accuracy, 0) / last10.length) * 100) : null;
   const bestNpm = hist.length ? Math.max(...hist.map((r) => r.notesPerMin)) : null;
   const streak = streakDays();
+  const journeyDone = dailyDoneCount();
 
   const keyRows = Object.entries(p.sightread.byKey)
     .map(([key, v]) => ({ key, pct: v.total ? Math.round((v.correct / v.total) * 100) : 0, total: v.total }))
@@ -150,6 +152,7 @@ export function mountProgress(root: HTMLElement): () => void {
       <div class="tile"><div class="tile-num">${avgAcc !== null ? avgAcc + '%' : '—'}</div><div class="tile-label">${t('progress.accuracy')}</div></div>
       <div class="tile"><div class="tile-num">${bestNpm ?? '—'}</div><div class="tile-label">${t('progress.bestSpeed')}</div></div>
       <div class="tile"><div class="tile-num">${streak}</div><div class="tile-label">${t('progress.streak')}</div></div>
+      <div class="tile"><div class="tile-num">${journeyDone}<span class="tile-sub">/${DAILY_TOTAL}</span></div><div class="tile-label">${t('progress.journeyTile')}</div></div>
       <div class="tile"><div class="tile-num">${p.totals.notesPlayed.toLocaleString()}</div><div class="tile-label">${t('progress.notesPlayed')}</div></div>
     </div>
     <div class="viz-grid">
