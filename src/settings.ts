@@ -1,13 +1,17 @@
 // Persisted user settings (localStorage) with change subscriptions.
 // Keep this tiny and serializable — one JSON blob under a single key.
 
+import type { PianoTone } from './synth';
+
 export interface Settings {
   pianoSound: boolean; // play the app's synth for incoming/played notes
   volume: number;      // master volume, 0..1
+  tone: PianoTone;     // piano timbre (grand / dark / lofi)
 }
 
 const STORE_KEY = 'sightline.settings';
-const DEFAULTS: Settings = { pianoSound: true, volume: 0.9 };
+const TONES: PianoTone[] = ['grand', 'dark', 'lofi'];
+const DEFAULTS: Settings = { pianoSound: true, volume: 0.9, tone: 'grand' };
 
 function load(): Settings {
   try {
@@ -17,6 +21,7 @@ function load(): Settings {
       return {
         pianoSound: typeof parsed.pianoSound === 'boolean' ? parsed.pianoSound : DEFAULTS.pianoSound,
         volume: typeof parsed.volume === 'number' ? Math.max(0, Math.min(1, parsed.volume)) : DEFAULTS.volume,
+        tone: parsed.tone && TONES.includes(parsed.tone) ? parsed.tone : DEFAULTS.tone,
       };
     }
   } catch {

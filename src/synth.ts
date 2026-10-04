@@ -8,10 +8,30 @@
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let reverbSend: GainNode | null = null;
+let wetGain: GainNode | null = null;
 
 // User settings applied to the audio graph (see settings.ts / main.ts).
 let masterVolume = 0.9;
 let pianoOutput = true;
+
+// Selectable piano timbres. Each spec reshapes the additive voice: its partial
+// mix (richness), brightness-filter scaling (tone colour), reverb wetness, the
+// hammer-noise transient, ring length, and a detune wobble for the lo-fi warble.
+export type PianoTone = 'grand' | 'dark' | 'lofi';
+interface ToneSpec {
+  partials: number[];
+  brightMul: number;
+  wet: number;
+  hammerMul: number;
+  decayMul: number;
+  wobble: number; // extra cents on the shimmer voice
+}
+const TONES: Record<PianoTone, ToneSpec> = {
+  grand: { partials: [1, 0.62, 0.45, 0.30, 0.18, 0.11, 0.07], brightMul: 1.0, wet: 0.12, hammerMul: 1.0, decayMul: 1.0, wobble: 0 },
+  dark: { partials: [1, 0.50, 0.26, 0.12, 0.06, 0.03, 0.015], brightMul: 0.55, wet: 0.22, hammerMul: 0.7, decayMul: 1.18, wobble: 0 },
+  lofi: { partials: [1, 0.55, 0.30, 0.14, 0.07, 0.03, 0.02], brightMul: 0.42, wet: 0.16, hammerMul: 1.35, decayMul: 0.8, wobble: 9 },
+};
+let tone: PianoTone = 'grand';
 
 function makeImpulse(ac: AudioContext, seconds: number, decay: number): AudioBuffer {
   const len = Math.floor(ac.sampleRate * seconds);
@@ -41,7 +61,8 @@ function audio(): AudioContext {
     reverbSend = ctx.createGain();
     reverbSend.gain.value = 1;
     const wet = ctx.createGain();
-    wet.gain.value = 0.12;
+    wet.gain.value = TONES[tone].wet;
+    wetGain = wet;
     reverbSend.connect(conv);
     conv.connect(wet);
     wet.connect(master);
@@ -87,19 +108,14 @@ const active = new Map<number, Handle>();
 let sustainOn = false;
 const sustained = new Set<number>();
 
-// Relative amplitude of each harmonic partial (1st = fundamental).
-const PARTIAL_AMPS = [1, 0.62, 0.45, 0.30, 0.18, 0.11, 0.07];
-// Two unison voices: the main one is full; the detuned one carries only the
-// loud low partials, for shimmer without doubling the oscillator count.
-const VOICES = [
-  { cents: -2.5, count: PARTIAL_AMPS.length },
-  { cents: 3.0, count: 3 },
-];
+// Two unison voices give shimmer without doubling the oscillator count: the
+// main one carries all partials; the detuned one only the loud low partials.
 const INHARMONICITY = 0.0004;
 
 /** Piano-ish tone. If `durSec` is given it self-releases; otherwise call pianoOff. */
 export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: number): void {
   if (!pianoOutput) return; // piano sound disabled in Settings
+  const spec = TONES[tone];
   const ac = audio();
   const t = when ?? ac.currentTime;
   const f0 = midiToFreq(midi);
@@ -109,11 +125,12 @@ export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: num
   noteGain.gain.value = 1;
 
   // Brightness: opens with how hard you play, then dulls as the string rings.
+  // The tone's brightMul shifts the whole colour darker (dark / lo-fi).
   const bright = ac.createBiquadFilter();
   bright.type = 'lowpass';
   bright.Q.value = 0.2;
-  const openHz = Math.min(12000, 1700 + vel * 7000 + f0 * 1.5);
-  const dullHz = Math.min(openHz, Math.max(700, 800 + f0 * 1.2));
+  const openHz = Math.min(12000, (1700 + vel * 7000 + f0 * 1.5) * spec.brightMul);
+  const dullHz = Math.min(openHz, Math.max(500, (800 + f0 * 1.2) * spec.brightMul));
   bright.frequency.setValueAtTime(openHz, t);
   bright.frequency.exponentialRampToValueAtTime(dullHz, t + 0.7);
 
@@ -121,10 +138,14 @@ export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: num
   bright.connect(out());
   bright.connect(reverb());
 
-  const baseDecay = Math.max(0.8, 5.2 - midi / 22); // low notes ring longer
+  const baseDecay = Math.max(0.8, 5.2 - midi / 22) * spec.decayMul; // low notes ring longer
   const peakScale = 0.26 * vel;
 
-  for (const voice of VOICES) {
+  const voices = [
+    { cents: -2.5, count: spec.partials.length },
+    { cents: 3.0 + spec.wobble, count: 3 },
+  ];
+  for (const voice of voices) {
     const mult = Math.pow(2, voice.cents / 1200);
     for (let i = 0; i < voice.count; i++) {
       const n = i + 1;
@@ -134,7 +155,7 @@ export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: num
       o.type = 'sine';
       o.frequency.value = pf;
       const g = ac.createGain();
-      const peak = (PARTIAL_AMPS[i] * peakScale) / VOICES.length;
+      const peak = (spec.partials[i] * peakScale) / voices.length;
       const pDecay = baseDecay / (1 + 0.8 * (n - 1)); // upper partials die faster
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(peak, t + 0.005);
@@ -153,7 +174,7 @@ export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: num
   nf.type = 'lowpass';
   nf.frequency.value = Math.min(5000, f0 * 4);
   const ng = ac.createGain();
-  ng.gain.setValueAtTime(0.06 * vel, t);
+  ng.gain.setValueAtTime(0.06 * vel * spec.hammerMul, t);
   ng.gain.exponentialRampToValueAtTime(0.0004, t + 0.055);
   src.connect(nf);
   nf.connect(ng);
@@ -279,4 +300,10 @@ export function setPianoOutput(on: boolean): void {
     active.clear();
     sustained.clear();
   }
+}
+
+/** Select the piano timbre. Reverb wetness is applied live; the rest affects new notes. */
+export function setPianoTone(tn: PianoTone): void {
+  tone = tn;
+  if (wetGain) wetGain.gain.value = TONES[tone].wet;
 }

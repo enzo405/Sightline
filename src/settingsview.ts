@@ -5,7 +5,13 @@ import { lang, setLang, t } from './i18n';
 import { initMidi, midiSupported, MidiStatus, onMidiStatus } from './midi';
 import { resetProgress } from './progress';
 import { onSettingsChange, resetSettings, settings, updateSettings } from './settings';
-import { unlockAudio } from './synth';
+import { now, pianoOn, unlockAudio } from './synth';
+
+// Short C-major arpeggio so the user hears the timbre they just picked.
+function previewTone(): void {
+  const base = now();
+  [60, 64, 67, 72].forEach((m, i) => pianoOn(m, 82, base + i * 0.1, 0.55));
+}
 
 export function mountSettings(el: HTMLElement): () => void {
   const s = settings();
@@ -28,6 +34,17 @@ export function mountSettings(el: HTMLElement): () => void {
         <label class="setting-row">
           <span>${t('settings.volume')}</span>
           <input type="range" id="set-vol" min="0" max="100" step="1" value="${Math.round(s.volume * 100)}">
+        </label>
+        <label class="setting-row">
+          <span>
+            ${t('settings.tone')}
+            <small class="muted">${t('settings.toneHint')}</small>
+          </span>
+          <div class="seg" id="set-tone">
+            <button data-t="grand" class="${s.tone === 'grand' ? 'active' : ''}">${t('settings.toneGrand')}</button>
+            <button data-t="dark" class="${s.tone === 'dark' ? 'active' : ''}">${t('settings.toneDark')}</button>
+            <button data-t="lofi" class="${s.tone === 'lofi' ? 'active' : ''}">${t('settings.toneLofi')}</button>
+          </div>
         </label>
       </section>
 
@@ -72,6 +89,19 @@ export function mountSettings(el: HTMLElement): () => void {
   vol.addEventListener('input', () => {
     unlockAudio();
     updateSettings({ volume: Number(vol.value) / 100 });
+  });
+
+  // --- piano tone ---
+  const toneSeg = el.querySelector('#set-tone') as HTMLElement;
+  toneSeg.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest('button') as HTMLButtonElement | null;
+    const tn = b?.dataset.t;
+    if (tn !== 'grand' && tn !== 'dark' && tn !== 'lofi') return;
+    unlockAudio();
+    updateSettings({ tone: tn }); // main.ts applies setPianoTone via onSettingsChange
+    toneSeg.querySelectorAll('button').forEach((x) =>
+      x.classList.toggle('active', (x as HTMLElement).dataset.t === tn));
+    previewTone();
   });
 
   // --- language ---

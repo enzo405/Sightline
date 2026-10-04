@@ -13,7 +13,7 @@ import { mountSettings } from './settingsview';
 import { onSettingsChange, settings } from './settings';
 import { mountSightread } from './sightread';
 import { mountTechnique } from './technique';
-import { setMasterVolume, setPianoOutput, unlockAudio } from './synth';
+import { setMasterVolume, setPianoOutput, setPianoTone, unlockAudio } from './synth';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -39,6 +39,7 @@ function applyAudioSettings() {
   const s = settings();
   setPianoOutput(s.pianoSound);
   setMasterVolume(s.volume);
+  setPianoTone(s.tone);
 }
 applyAudioSettings();
 onSettingsChange(applyAudioSettings);
