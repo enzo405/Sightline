@@ -230,7 +230,7 @@ export function mountProgress(root: HTMLElement): () => void {
   (root.querySelector('#pg-technique') as HTMLElement).innerHTML = techEntries.length
     ? `<div class="stat-row">` + techEntries.map(([id, v]) => {
         const [type, key, hand] = id.split(':');
-        const label = `${techTypeLabel[type] ?? type} · ${key} · ${hand === 'right' ? t('tech.right') : t('tech.left')}`;
+        const label = `${techTypeLabel[type] ?? type} · ${keyName(key)} · ${hand === 'right' ? t('tech.right') : t('tech.left')}`;
         return `<div class="tile"><div class="tile-num">${v.bestNpm}<span class="tile-sub"> n/min</span></div><div class="tile-label">${label}</div></div>`;
       }).join('') + `</div>`
     : `<p class="muted">${t('progress.techniqueEmpty')}</p>`;

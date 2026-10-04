@@ -3,7 +3,7 @@
 // graded for accuracy and evenness, tracking your top *clean* tempo per drill.
 // Reuses the shared PlayThrough engine and notation renderer.
 
-import { t } from './i18n';
+import { keyName, t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, Measure, NoteStatus, Score, ScoreNote } from './notation';
 import { PlayThrough } from './playthrough';
@@ -89,7 +89,7 @@ export function mountTechnique(root: HTMLElement): () => void {
         </select>
       </label>
       <label>${t('tech.root')}
-        <select id="tc-root">${ROOTS.map((r) => `<option value="${r}">${r}</option>`).join('')}</select>
+        <select id="tc-root">${ROOTS.map((r) => `<option value="${r}">${keyName(r)}</option>`).join('')}</select>
       </label>
       <label>${t('tech.hand')}
         <select id="tc-hand">

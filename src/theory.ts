@@ -26,6 +26,15 @@ export function keyNameFr(key: string): string {
   return names[pc];
 }
 
+/** Localize a chord symbol's root to French solfège, keeping the quality
+ *  suffix, e.g. "Gm7" -> "Sol m7", "Fmaj7" -> "Fa maj7". */
+export function chordSymbolFr(symbol: string): string {
+  const m = symbol.match(/^([A-G][#b]?)(.*)$/);
+  if (!m) return symbol;
+  const names = m[1].includes('b') ? SOLFEGE_FLAT : SOLFEGE_SHARP;
+  return names[PC[m[1]]] + m[2];
+}
+
 /** VexFlow key string like "c#/4" or "eb/3". */
 export function midiToVexKey(midi: number, preferFlats = false): string {
   const names = preferFlats ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;

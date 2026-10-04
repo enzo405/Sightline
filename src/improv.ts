@@ -5,7 +5,7 @@
 // cards ("only chord tones", "three notes only", ...).
 
 import { input } from './events';
-import { noteName, t } from './i18n';
+import { chordName, noteName, t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { Keyboard } from './keyboard';
 import { progress, save, countNotes } from './progress';
@@ -104,7 +104,7 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
 
   function renderTimeline() {
     timelineEl.innerHTML = prog.chords
-      .map((c, i) => `<div class="chord-chip${i === chordIdx ? ' active' : ''}" data-i="${i}">${c}</div>`)
+      .map((c, i) => `<div class="chord-chip${i === chordIdx ? ' active' : ''}" data-i="${i}">${chordName(c)}</div>`)
       .join('');
   }
 

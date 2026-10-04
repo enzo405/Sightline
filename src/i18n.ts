@@ -2,7 +2,7 @@
 // All user-facing strings live in the DICT below; features call t('key').
 // Note/key names are language-aware (English letters vs. French solfège).
 
-import { keyNameFr, midiToName, midiToNameFr } from './theory';
+import { chordSymbolFr, keyNameFr, midiToName, midiToNameFr } from './theory';
 
 export type Lang = 'en' | 'fr';
 
@@ -42,6 +42,12 @@ export function noteName(midi: number, preferFlats = false): string {
 /** Language-aware tonic name for a key signature, e.g. "Bb" / "Si♭". */
 export function keyName(key: string): string {
   return current === 'fr' ? keyNameFr(key) : key;
+}
+
+/** Language-aware chord symbol: French localizes the root to solfège and keeps
+ *  the quality suffix (e.g. "Gm7" -> "Sol m7"); English is unchanged. */
+export function chordName(symbol: string): string {
+  return current === 'fr' ? chordSymbolFr(symbol) : symbol;
 }
 
 type Dict = Record<string, string>;

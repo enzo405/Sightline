@@ -7,10 +7,9 @@
 // skill map via recordEar().
 
 import { input } from './events';
-import { t } from './i18n';
+import { noteName, t } from './i18n';
 import { recordEar } from './progress';
 import { now, pianoOn, unlockAudio } from './synth';
-import { midiToName } from './theory';
 import { tutorialHTML } from './tutorial';
 
 type Mode = 'intervals' | 'chords' | 'dictation';
@@ -120,7 +119,7 @@ export function mountEar(root: HTMLElement): () => void {
     if (!q) return '';
     if (q.mode === 'intervals') return t('ear.int.' + q.answer);
     if (q.mode === 'chords') return t('ear.chord.' + q.answer);
-    return (q.seq ?? []).map((m) => midiToName(m)).join(' ');
+    return (q.seq ?? []).map((m) => noteName(m)).join(' ');
   }
 
   function updateStats() {
@@ -227,7 +226,7 @@ export function mountEar(root: HTMLElement): () => void {
     }
     listening = false;
     const correct = q.seq.every((m, i) => m % 12 === got[i] % 12);
-    grade(correct, got.map((m) => midiToName(m)).join(' '));
+    grade(correct, got.map((m) => noteName(m)).join(' '));
   });
 
   newBtn.addEventListener('click', newQuestion);
