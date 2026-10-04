@@ -178,6 +178,9 @@ const EN: Dict = {
   'piece.twinkle': 'Twinkle, Twinkle, Little Star',
   'piece.saints': 'When the Saints Go Marching In',
   'piece.jingle-bells': 'Jingle Bells (chorus)',
+  'piece.mary': 'Mary Had a Little Lamb',
+  'piece.auclair': 'Au clair de la lune',
+  'piece.lightly-row': 'Lightly Row',
 
   // Technique
   'tech.title': 'Technique Trainer',
@@ -431,6 +434,9 @@ const FR: Dict = {
   'piece.twinkle': 'Ah ! vous dirai-je, maman',
   'piece.saints': 'When the Saints Go Marching In',
   'piece.jingle-bells': 'Vive le vent (refrain)',
+  'piece.mary': 'Mary Had a Little Lamb',
+  'piece.auclair': 'Au clair de la lune',
+  'piece.lightly-row': 'Lightly Row',
 
   // Technique
   'tech.title': 'Entraînement technique',
