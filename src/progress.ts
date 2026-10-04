@@ -33,6 +33,7 @@ export interface ProgressData {
   };
   fading: Record<string, { level: number; completions: number }>;
   improv: { sessions: ImprovSession[]; callResponse: CallResponseRecord[] };
+  technique: Record<string, { bestNpm: number; attempts: number; cleanRuns: number }>;
   totals: { notesPlayed: number; days: Record<string, number> };
 }
 
@@ -43,6 +44,7 @@ function blank(): ProgressData {
     sightread: { level: 1, history: [], byKey: {} },
     fading: {},
     improv: { sessions: [], callResponse: [] },
+    technique: {},
     totals: { notesPlayed: 0, days: {} },
   };
 }
@@ -86,6 +88,21 @@ export function recordSightread(rec: SightreadRecord, correct: number, total: nu
   bk.total += total;
   p.sightread.byKey[rec.key] = bk;
   save();
+}
+
+/** Record a technique run. Returns true if this run set a new top clean speed. */
+export function recordTechnique(id: string, notesPerMin: number, clean: boolean): boolean {
+  const p = progress();
+  const entry = p.technique[id] ?? { bestNpm: 0, attempts: 0, cleanRuns: 0 };
+  entry.attempts++;
+  let newBest = false;
+  if (clean) {
+    entry.cleanRuns++;
+    if (notesPerMin > entry.bestNpm) { entry.bestNpm = notesPerMin; newBest = true; }
+  }
+  p.technique[id] = entry;
+  save();
+  return newBest;
 }
 
 export function streakDays(): number {

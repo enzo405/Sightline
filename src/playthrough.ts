@@ -13,6 +13,7 @@ export interface PlayResult {
   notesPerMin: number;
   rhythmFlags: Map<number, string>; // drawIndex -> 'rushed' | 'dragged'
   rhythmIssues: number;
+  evenness: number;          // 0..1, timing consistency (1 = perfectly even)
 }
 
 export interface PlayThroughOpts {
@@ -96,6 +97,7 @@ export class PlayThrough {
     // scaled by the player's own average beat length.
     const rhythmFlags = new Map<number, string>();
     let rhythmIssues = 0;
+    let evenness = 1;
     if (total >= 6) {
       const iois: number[] = [];
       const beatsArr: number[] = [];
@@ -106,6 +108,11 @@ export class PlayThrough {
       const ratios = iois.map((ms, i) => ms / beatsArr[i]).sort((a, b) => a - b);
       const beatMs = ratios[Math.floor(ratios.length / 2)]; // median ms per beat
       if (beatMs > 50) {
+        // Timing consistency: lower spread of per-beat ratios = more even.
+        const mean = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+        const variance = ratios.reduce((s, r) => s + (r - mean) ** 2, 0) / ratios.length;
+        const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
+        evenness = Math.max(0, Math.min(1, 1 - cv));
         for (let i = 0; i < iois.length; i++) {
           const expected = beatsArr[i] * beatMs;
           const r = iois[i] / expected;
@@ -119,7 +126,7 @@ export class PlayThrough {
     this.opts.onComplete({
       total, correctFirstTry,
       accuracy: total ? correctFirstTry / total : 0,
-      elapsedMs, notesPerMin, rhythmFlags, rhythmIssues,
+      elapsedMs, notesPerMin, rhythmFlags, rhythmIssues, evenness,
     });
   }
 

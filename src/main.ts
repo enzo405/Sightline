@@ -12,6 +12,7 @@ import { mountProgress } from './progressview';
 import { mountSettings } from './settingsview';
 import { onSettingsChange, settings } from './settings';
 import { mountSightread } from './sightread';
+import { mountTechnique } from './technique';
 import { setMasterVolume, setPianoOutput, unlockAudio } from './synth';
 
 const app = document.getElementById('app')!;
@@ -47,6 +48,7 @@ const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => vo
   { id: 'read', labelKey: 'tab.read', mount: mountSightread },
   { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
   { id: 'improv', labelKey: 'tab.improv', mount: (el) => mountImprov(el, keyboard) },
+  { id: 'technique', labelKey: 'tab.technique', mount: mountTechnique },
   { id: 'progress', labelKey: 'tab.progress', mount: mountProgress },
   { id: 'settings', labelKey: 'tab.settings', mount: mountSettings },
 ];

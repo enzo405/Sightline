@@ -169,6 +169,10 @@ export function mountProgress(root: HTMLElement): () => void {
         <h3>${t('progress.improvTitle')}</h3>
         <div id="pg-improv"></div>
       </div>
+      <div class="panel">
+        <h3>${t('progress.techniqueTitle')}</h3>
+        <div id="pg-technique"></div>
+      </div>
     </div>
   `;
 
@@ -209,6 +213,21 @@ export function mountProgress(root: HTMLElement): () => void {
       <div class="tile"><div class="tile-num">${crBest !== null ? crBest + '/5' : '—'}</div><div class="tile-label">${t('progress.bestCall')}</div></div>
       <div class="tile"><div class="tile-num">${p.improv.sessions.length}</div><div class="tile-label">${t('progress.improvSessions')}</div></div>
     </div>`;
+
+  const techTypeLabel: Record<string, string> = {
+    'five-major': t('tech.fiveMajor'), 'five-minor': t('tech.fiveMinor'),
+    'scale-major': t('tech.scaleMajor'), 'arpeggio-major': t('tech.arpeggio'),
+  };
+  const techEntries = Object.entries(p.technique)
+    .filter(([, v]) => v.bestNpm > 0)
+    .sort((a, b) => b[1].bestNpm - a[1].bestNpm);
+  (root.querySelector('#pg-technique') as HTMLElement).innerHTML = techEntries.length
+    ? `<div class="stat-row">` + techEntries.map(([id, v]) => {
+        const [type, key, hand] = id.split(':');
+        const label = `${techTypeLabel[type] ?? type} · ${key} · ${hand === 'right' ? t('tech.right') : t('tech.left')}`;
+        return `<div class="tile"><div class="tile-num">${v.bestNpm}<span class="tile-sub"> n/min</span></div><div class="tile-label">${label}</div></div>`;
+      }).join('') + `</div>`
+    : `<p class="muted">${t('progress.techniqueEmpty')}</p>`;
 
   return () => hideTip();
 }
