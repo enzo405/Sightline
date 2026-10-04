@@ -4,6 +4,7 @@
 // Reuses the shared PlayThrough engine and notation renderer.
 
 import { t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, Measure, NoteStatus, Score, ScoreNote } from './notation';
 import { PlayThrough } from './playthrough';
 import { countNotes, progress, recordTechnique } from './progress';
@@ -76,6 +77,7 @@ export function mountTechnique(root: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('tech.title')}</h2>
       <p>${t('tech.intro')}</p>
+      ${tutorialHTML('technique')}
     </div>
     <div class="toolbar">
       <label>${t('tech.type')}

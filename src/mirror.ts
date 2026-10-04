@@ -5,6 +5,7 @@
 
 import { input } from './events';
 import { t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { Metronome } from './metronome';
 import { renderScore } from './notation';
 import { countNotes } from './progress';
@@ -16,6 +17,7 @@ export function mountMirror(root: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('mirror.title')}</h2>
       <p>${t('mirror.intro')}</p>
+      ${tutorialHTML('mirror')}
     </div>
     <div class="toolbar">
       <label>${t('mirror.tempo')} <input type="number" id="mir-bpm" min="40" max="200" value="90" class="num"> ${t('mirror.bpm')}</label>

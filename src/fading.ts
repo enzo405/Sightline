@@ -4,6 +4,7 @@
 // flow + memory. In hidden bars, notes materialize as you play them.
 
 import { t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { pieceScore, PIECES, pieceTitle } from './pieces';
 import { countNotes, progress, save } from './progress';
@@ -37,6 +38,7 @@ export function mountFading(root: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('fade.title')}</h2>
       <p>${t('fade.intro')}</p>
+      ${tutorialHTML('fading')}
     </div>
     <div class="toolbar">
       <label>${t('fade.piece')}

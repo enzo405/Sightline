@@ -5,6 +5,7 @@
 
 import { FADE_LEVELS } from './fading';
 import { keyName, t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { PIECES, pieceTitle } from './pieces';
 import { progress, streakDays } from './progress';
 
@@ -142,6 +143,7 @@ export function mountProgress(root: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('progress.title')}</h2>
       <p>${t('progress.intro')}</p>
+      ${tutorialHTML('progress')}
     </div>
     <div class="result-tiles wide">
       <div class="tile"><div class="tile-num">${p.sightread.level}<span class="tile-sub">/10</span></div><div class="tile-label">${t('progress.level')}</div></div>

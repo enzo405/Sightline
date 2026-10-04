@@ -106,6 +106,27 @@ main {
 .feature-intro p { color: var(--ink-2); margin: 0 0 14px; line-height: 1.5; max-width: 72ch; }
 .feature-intro code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
 
+/* Collapsible "How it works" tutorial (tutorial.ts) */
+.tutorial {
+  margin: 0 0 16px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); max-width: 72ch;
+}
+.tutorial > summary {
+  cursor: pointer; padding: 9px 14px; font-size: 13px; font-weight: 600;
+  color: var(--ink-2); list-style: none; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.tutorial > summary::-webkit-details-marker { display: none; }
+.tutorial > summary::before {
+  content: '▸'; color: var(--muted); transition: transform var(--ease);
+}
+.tutorial[open] > summary::before { transform: rotate(90deg); }
+.tutorial ol {
+  margin: 0; padding: 0 18px 12px 38px; color: var(--ink-2);
+  font-size: 13px; line-height: 1.55;
+}
+.tutorial li { margin: 4px 0; }
+
 .toolbar {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 10px 12px;

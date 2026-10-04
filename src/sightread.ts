@@ -5,6 +5,7 @@
 
 import { generateExercise, Exercise } from './generator';
 import { keyName, t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { PlayResult, PlayThrough } from './playthrough';
 import { countNotes, progress, recordSightread, save, today } from './progress';
@@ -14,6 +15,7 @@ export function mountSightread(root: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('read.title')}</h2>
       <p>${t('read.intro')}</p>
+      ${tutorialHTML('read')}
     </div>
     <div class="toolbar">
       <span class="level-badge">${t('read.level')} <b id="sr-level"></b>/10</span>

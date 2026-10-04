@@ -2,6 +2,7 @@
 // piano sound on/off, master volume, language, and MIDI keyboard connection.
 
 import { lang, setLang, t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { initMidi, midiSupported, MidiStatus, onMidiStatus } from './midi';
 import { resetProgress } from './progress';
 import { onSettingsChange, resetSettings, settings, updateSettings } from './settings';
@@ -19,6 +20,7 @@ export function mountSettings(el: HTMLElement): () => void {
     <div class="feature-intro">
       <h2>${t('settings.title')}</h2>
       <p>${t('settings.intro')}</p>
+      ${tutorialHTML('settings')}
     </div>
 
     <div class="settings-grid">

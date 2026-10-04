@@ -6,6 +6,7 @@
 
 import { input } from './events';
 import { noteName, t } from './i18n';
+import { tutorialHTML } from './tutorial';
 import { Keyboard } from './keyboard';
 import { progress, save, countNotes } from './progress';
 import { bassNote, hat, now, padChord, pianoOn, unlockAudio } from './synth';
@@ -35,6 +36,7 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
     <div class="feature-intro">
       <h2>${t('improv.title')}</h2>
       <p>${t('improv.intro')}</p>
+      ${tutorialHTML('improv')}
     </div>
     <div class="toolbar">
       <label>${t('improv.progression')}

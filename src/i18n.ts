@@ -222,6 +222,16 @@ const EN: Dict = {
   'settings.reset': 'Reset all my data',
   'settings.resetConfirm': 'Erase all practice history, progress and settings on this device? This cannot be undone.',
 
+  // Tutorials (steps separated by |)
+  'tut.title': 'How it works',
+  'tut.mirror': 'Pick an input: MIDI piano, the on-screen keys, or your A–; computer-keyboard row.|Press Record, wait for the count-in, then play a short phrase you know.|Start on the beat — the rhythm grid locks onto your first note.|Press Stop to see your playing written as notation, then refine and repeat.',
+  'tut.read': 'A single note is highlighted in blue — play it on your instrument.|Keep a steady pulse; correct notes turn green, misses flash red.|Play the whole line through without stopping; rhythm is scored afterwards.|Stay above 92% to level up — difficulty adapts to keep you near 85%.',
+  'tut.fading': 'Choose a piece you already know by ear.|Play it through with every hint shown (note names, fingering, full bars).|Score ≥90% and the next layer of hints fades away.|Keep going until the bars are blank and you are playing from memory.',
+  'tut.improv': 'Press Start to launch the backing track over a chord progression.|Watch the keyboard: chord tones and scale tones light up for the current chord.|Improvise using the lit notes; add a constraint card to push your choices.|Or run call-and-response: listen to a phrase, then echo it back.',
+  'tut.technique': 'Choose a drill type, a key, and which hand to train.|Play the pattern up and then back down, following the printed fingering.|Keep an even pulse — you are graded on accuracy and evenness.|Play it cleanly, then raise the tempo; your best clean speed is saved.',
+  'tut.progress': 'Everything here is measured from your real playing — nothing is self-reported.|Practice a little every day to grow your streak.|Read the accuracy trend and per-key bars to find weak spots.|Hover any chart point for the exact numbers.',
+  'tut.settings': 'Turn the app piano sound off if you only want visuals while hearing your own piano.|Pick a piano tone and set the volume to taste.|Connect a MIDI keyboard, or switch the language.|Use “Reset all my data” to wipe your history and start fresh.',
+
   // Progress
   'progress.title': 'Your skill map',
   'progress.intro': 'Short daily sessions, visible progress. Everything below is measured from your actual playing in the other three rooms — nothing is self-reported.',
@@ -431,6 +441,16 @@ const FR: Dict = {
   'settings.dataHint': 'Tout votre historique et vos réglages restent dans ce navigateur. Rien n’est envoyé ailleurs.',
   'settings.reset': 'Réinitialiser mes données',
   'settings.resetConfirm': 'Effacer tout l’historique, la progression et les réglages sur cet appareil ? Action irréversible.',
+
+  // Tutoriels (étapes séparées par |)
+  'tut.title': 'Comment ça marche',
+  'tut.mirror': 'Choisissez une entrée : piano MIDI, clavier à l’écran, ou la rangée A–; du clavier d’ordinateur.|Appuyez sur Enregistrer, attendez le décompte, puis jouez une courte phrase que vous connaissez.|Démarrez sur le temps — la grille rythmique se cale sur votre première note.|Appuyez sur Stop pour voir votre jeu écrit en partition, puis affinez et recommencez.',
+  'tut.read': 'Une seule note est surlignée en bleu — jouez-la sur votre instrument.|Gardez une pulsation régulière ; les notes justes passent au vert, les erreurs clignotent en rouge.|Jouez toute la ligne sans vous arrêter ; le rythme est évalué à la fin.|Restez au-dessus de 92 % pour monter de niveau — la difficulté s’adapte pour vous garder vers 85 %.',
+  'tut.fading': 'Choisissez un morceau que vous connaissez déjà d’oreille.|Jouez-le avec tous les indices affichés (noms de notes, doigtés, mesures).|Atteignez ≥90 % et la couche d’indices suivante s’efface.|Continuez jusqu’à ce que les mesures soient vides et que vous jouiez de mémoire.',
+  'tut.improv': 'Appuyez sur Démarrer pour lancer l’accompagnement sur une grille d’accords.|Observez le clavier : les notes de l’accord et de la gamme s’allument pour l’accord en cours.|Improvisez avec les notes allumées ; ajoutez une carte contrainte pour pousser vos choix.|Ou lancez l’appel-réponse : écoutez une phrase, puis répétez-la.',
+  'tut.technique': 'Choisissez un type d’exercice, une tonalité et la main à travailler.|Jouez le motif en montant puis en descendant, en suivant le doigté indiqué.|Gardez une pulsation régulière — vous êtes évalué sur la précision et la régularité.|Jouez-le proprement, puis accélérez ; votre meilleur tempo propre est enregistré.',
+  'tut.progress': 'Tout ici est mesuré à partir de votre jeu réel — rien n’est auto-déclaré.|Pratiquez un peu chaque jour pour faire grandir votre série.|Lisez la tendance de précision et les barres par tonalité pour repérer les faiblesses.|Survolez un point du graphique pour les chiffres exacts.',
+  'tut.settings': 'Désactivez le son de piano de l’appli si vous ne voulez que le visuel tout en entendant votre propre piano.|Choisissez un timbre de piano et réglez le volume.|Connectez un clavier MIDI, ou changez la langue.|Utilisez « Réinitialiser mes données » pour effacer votre historique et repartir de zéro.',
 
   // Progression
   'progress.title': 'Votre carte de compétences',
