@@ -2,16 +2,19 @@
 // Keep this tiny and serializable — one JSON blob under a single key.
 
 import type { PianoTone } from './synth';
+import type { Difficulty } from './curriculum';
 
 export interface Settings {
-  pianoSound: boolean; // play the app's synth for incoming/played notes
-  volume: number;      // master volume, 0..1
-  tone: PianoTone;     // piano timbre (grand / dark / lofi)
+  pianoSound: boolean;     // play the app's synth for incoming/played notes
+  volume: number;          // master volume, 0..1
+  tone: PianoTone;         // piano timbre (grand / dark / lofi)
+  difficulty: Difficulty;  // 30-day journey intensity (beginner / standard / advanced)
 }
 
 const STORE_KEY = 'sightline.settings';
 const TONES: PianoTone[] = ['grand', 'dark', 'lofi'];
-const DEFAULTS: Settings = { pianoSound: true, volume: 0.9, tone: 'grand' };
+const DIFFICULTIES: Difficulty[] = ['beginner', 'standard', 'advanced'];
+const DEFAULTS: Settings = { pianoSound: true, volume: 0.9, tone: 'grand', difficulty: 'standard' };
 
 function load(): Settings {
   try {
@@ -22,6 +25,7 @@ function load(): Settings {
         pianoSound: typeof parsed.pianoSound === 'boolean' ? parsed.pianoSound : DEFAULTS.pianoSound,
         volume: typeof parsed.volume === 'number' ? Math.max(0, Math.min(1, parsed.volume)) : DEFAULTS.volume,
         tone: parsed.tone && TONES.includes(parsed.tone) ? parsed.tone : DEFAULTS.tone,
+        difficulty: parsed.difficulty && DIFFICULTIES.includes(parsed.difficulty) ? parsed.difficulty : DEFAULTS.difficulty,
       };
     }
   } catch {

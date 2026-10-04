@@ -59,6 +59,17 @@ export function mountSettings(el: HTMLElement): () => void {
       </section>
 
       <section class="panel">
+        <h3>${t('settings.difficulty')}</h3>
+        <p class="muted">${t('settings.difficultyHint')}</p>
+        <div class="seg" id="set-diff">
+          <button data-d="beginner" class="${s.difficulty === 'beginner' ? 'active' : ''}">${t('settings.diffBeginner')}</button>
+          <button data-d="standard" class="${s.difficulty === 'standard' ? 'active' : ''}">${t('settings.diffStandard')}</button>
+          <button data-d="advanced" class="${s.difficulty === 'advanced' ? 'active' : ''}">${t('settings.diffAdvanced')}</button>
+        </div>
+        <p class="muted" id="set-diff-desc">${t('settings.diff.' + s.difficulty + '.desc')}</p>
+      </section>
+
+      <section class="panel">
         <h3>${t('settings.midi')}</h3>
         <p class="muted" id="set-midi-status"></p>
         <button class="btn primary" id="set-midi-btn"></button>
@@ -112,6 +123,19 @@ export function mountSettings(el: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest('button') as HTMLButtonElement | null;
     if (b?.dataset.l === 'en' || b?.dataset.l === 'fr') setLang(b.dataset.l);
     // main.ts re-mounts this tab on language change, so no manual re-render here.
+  });
+
+  // --- journey difficulty ---
+  const diffSeg = el.querySelector('#set-diff') as HTMLElement;
+  const diffDescEl = el.querySelector('#set-diff-desc') as HTMLElement;
+  diffSeg.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest('button') as HTMLButtonElement | null;
+    const d = b?.dataset.d;
+    if (d !== 'beginner' && d !== 'standard' && d !== 'advanced') return;
+    updateSettings({ difficulty: d });
+    diffSeg.querySelectorAll('button').forEach((x) =>
+      x.classList.toggle('active', (x as HTMLElement).dataset.d === d));
+    diffDescEl.textContent = t('settings.diff.' + d + '.desc');
   });
 
   // --- MIDI ---

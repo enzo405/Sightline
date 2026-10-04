@@ -10,6 +10,7 @@ import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { PlayThrough } from './playthrough';
 import { countNotes, dailyHighestDone, markDailyDone, progress } from './progress';
+import { settings } from './settings';
 import { DAILY_TOTAL, DailyDayDef, DailyTask, dailyDay } from './curriculum';
 
 function taskTitle(task: DailyTask): string {
@@ -61,9 +62,11 @@ export function mountDaily(root: HTMLElement): () => void {
     ringEl.style.setProperty('--pct', String(pct));
     ringNumEl.innerHTML = `${done}<small>/${DAILY_TOTAL}</small>`;
     const nd = nextOpenDay();
-    subEl.textContent = done >= DAILY_TOTAL
+    const diffName = t('settings.diff' + settings().difficulty.charAt(0).toUpperCase() + settings().difficulty.slice(1));
+    const base = done >= DAILY_TOTAL
       ? t('daily.allDone')
       : t('daily.overviewSub', { done, total: DAILY_TOTAL });
+    subEl.innerHTML = `${base}<br><span class="daily-diff-note">${t('daily.difficultyNote', { level: diffName })}</span>`;
     continueBtn.textContent = done === 0
       ? t('daily.start')
       : done >= DAILY_TOTAL ? t('daily.review') : t('daily.continue', { day: nd });
@@ -106,7 +109,7 @@ export function mountDaily(root: HTMLElement): () => void {
     engine?.dispose();
     engine = null;
     clearTimer();
-    def = dailyDay(day);
+    def = dailyDay(day, settings().difficulty);
     taskDone = def.tasks.map(() => false);
     detailEl.classList.remove('hidden');
     detailEl.innerHTML = `

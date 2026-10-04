@@ -43,61 +43,84 @@ function weekOf(day: number): number {
   return Math.floor((day - 1) / 7); // 0..4 (days 29-30 fall in week 4)
 }
 
+// Difficulty tunes how fast the month ramps and how strict the grading is, so
+// the same 30-day frame fits a true beginner or a more advanced player.
+export type Difficulty = 'beginner' | 'standard' | 'advanced';
+
+interface DiffCfg {
+  levelShift: number;   // added to the reading level
+  weekShift: number;    // shifts technique/étude ramp earlier (+) or later (-)
+  namesMaxWeek: number; // show note names while week <= this (-1 = never)
+  goalRead: number;     // accuracy needed to clear each task kind
+  goalTech: number;
+  goalEtude: number;
+}
+
+const DIFF: Record<Difficulty, DiffCfg> = {
+  beginner: { levelShift: -1, weekShift: -1, namesMaxWeek: 1, goalRead: 0.70, goalTech: 0.85, goalEtude: 0.80 },
+  standard: { levelShift: 0, weekShift: 0, namesMaxWeek: 0, goalRead: 0.80, goalTech: 0.90, goalEtude: 0.85 },
+  advanced: { levelShift: 2, weekShift: 1, namesMaxWeek: -1, goalRead: 0.85, goalTech: 0.95, goalEtude: 0.90 },
+};
+
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+
 // --- the three daily tasks, scaled by how far into the month we are ---
 
-function readingTask(day: number): DailyTask {
+function readingTask(day: number, cfg: DiffCfg): DailyTask {
   const w = weekOf(day);
-  const level = Math.min(10, 1 + w * 2 + (day % 2));
-  // Introduce the bass clef once the left hand enters the program (week 3+).
-  const clef: 'treble' | 'bass' = w >= 2 && day % 2 === 0 ? 'bass' : 'treble';
-  const withNames = w === 0; // first week spells notes out to learn the staff
+  const level = clamp(1 + w * 2 + (day % 2) + cfg.levelShift, 1, 10);
+  // Introduce the bass clef once the left hand enters the ramp.
+  const ramp = clamp(w + cfg.weekShift, 0, 4);
+  const clef: 'treble' | 'bass' = ramp >= 2 && day % 2 === 0 ? 'bass' : 'treble';
+  const withNames = w <= cfg.namesMaxWeek; // spell notes out early (longer for beginners)
   return {
     id: 'read',
     titleKey: withNames ? 'daily.task.readingNames' : 'daily.task.reading',
     params: { level },
-    goal: 0.8,
+    goal: cfg.goalRead,
     showNames: withNames,
     build: () => generateExercise(level, clef).score,
   };
 }
 
-function techniqueTask(day: number): DailyTask {
-  const w = weekOf(day);
+function techniqueTask(day: number, cfg: DiffCfg): DailyTask {
+  const tw = clamp(weekOf(day) + cfg.weekShift, 0, 3);
   const root = TECH_ROOTS[(day - 1) % TECH_ROOTS.length];
-  const hand: Hand = w >= 2 && day % 2 === 0 ? 'left' : 'right';
+  const hand: Hand = tw >= 2 && day % 2 === 0 ? 'left' : 'right';
   let type: ExType;
-  if (w === 0) type = 'five-major';
-  else if (w === 1) type = day % 2 === 1 ? 'scale-major' : 'arpeggio-major';
-  else if (w === 2) type = day % 3 === 0 ? 'five-minor' : day % 2 === 1 ? 'arpeggio-major' : 'scale-major';
+  if (tw === 0) type = 'five-major';
+  else if (tw === 1) type = day % 2 === 1 ? 'scale-major' : 'arpeggio-major';
+  else if (tw === 2) type = day % 3 === 0 ? 'five-minor' : day % 2 === 1 ? 'arpeggio-major' : 'scale-major';
   else type = day % 2 === 1 ? 'scale-major' : 'arpeggio-major';
   return {
     id: 'tech',
     titleKey: TECH_TYPE_LABEL[type],
     params: { root, hand },
-    goal: 0.9,
+    goal: cfg.goalTech,
     showFingering: true,
     build: () => buildTechniqueScore(type, root, hand),
   };
 }
 
-function etudeTask(day: number): DailyTask {
-  const hard = weekOf(day) >= 2;
+function etudeTask(day: number, cfg: DiffCfg): DailyTask {
+  const hard = clamp(weekOf(day) + cfg.weekShift, 0, 3) >= 2;
   return {
     id: 'etude',
     titleKey: hard ? 'daily.task.etudeHard' : 'daily.task.etudeEasy',
     params: {},
-    goal: 0.85,
+    goal: cfg.goalEtude,
     showFingering: true,
     build: () => generateEtude(hard ? 'etude-hard' : 'etude-easy'),
   };
 }
 
 /** The plan for a given day: a week focus plus its three graded tasks. */
-export function dailyDay(day: number): DailyDayDef {
+export function dailyDay(day: number, difficulty: Difficulty = 'standard'): DailyDayDef {
+  const cfg = DIFF[difficulty];
   const w = Math.min(4, weekOf(day));
   return {
     day,
     focusKey: `daily.focus.w${w}`,
-    tasks: [readingTask(day), techniqueTask(day), etudeTask(day)],
+    tasks: [readingTask(day, cfg), techniqueTask(day, cfg), etudeTask(day, cfg)],
   };
 }

@@ -468,3 +468,5 @@ footer {
 @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
 .daily-done-banner p { margin: 6px 0 14px; font-size: 16px; color: var(--ink); }
 .daily-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
+
+.daily-diff-note { font-size: 12px; color: var(--accent); }
