@@ -61,6 +61,9 @@ const EN: Dict = {
   'midi.none': 'MIDI: no device — use on-screen keys or A–; row',
   'midi.denied': 'MIDI: permission denied',
   'midi.unsupported': 'MIDI: not available — on-screen keys and the A–; row still work',
+  'midi.enable': '🎹 Enable MIDI',
+  'midi.enableTitle': 'Connect your MIDI keyboard (asks for browser permission)',
+  'midi.retry': '↻ Retry MIDI',
 
   // Mirror
   'mirror.title': 'Play-to-Notation Mirror',
@@ -219,6 +222,9 @@ const FR: Dict = {
   'midi.none': 'MIDI : aucun appareil — utilisez le clavier à l’écran ou la rangée A–;',
   'midi.denied': 'MIDI : permission refusée',
   'midi.unsupported': 'MIDI : non disponible — le clavier à l’écran et la rangée A–; fonctionnent',
+  'midi.enable': '🎹 Activer le MIDI',
+  'midi.enableTitle': 'Connectez votre clavier MIDI (demande l’autorisation du navigateur)',
+  'midi.retry': '↻ Réessayer le MIDI',
 
   // Miroir
   'mirror.title': 'Miroir jeu-partition',

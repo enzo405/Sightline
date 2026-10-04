@@ -14,6 +14,12 @@ export type MidiStatus =
 type StatusListener = (s: MidiStatus) => void;
 const listeners = new Set<StatusListener>();
 let current: MidiStatus = { state: 'unsupported' };
+let initializing = false;
+
+/** True when the browser exposes the Web MIDI API at all. */
+export function midiSupported(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.requestMIDIAccess;
+}
 
 export function onMidiStatus(fn: StatusListener): void {
   listeners.add(fn);
@@ -30,12 +36,15 @@ export async function initMidi(): Promise<void> {
     setStatus({ state: 'unsupported' });
     return;
   }
+  if (initializing) return;
+  initializing = true;
   let access: MIDIAccess;
   try {
     // sysex:false keeps the Firefox permission prompt to the minimal scope.
     access = await navigator.requestMIDIAccess({ sysex: false });
   } catch {
     setStatus({ state: 'denied' });
+    initializing = false;
     return;
   }
 
@@ -65,4 +74,5 @@ export async function initMidi(): Promise<void> {
 
   access.onstatechange = attach;
   attach();
+  initializing = false;
 }

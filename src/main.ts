@@ -6,7 +6,7 @@ import { mountFading } from './fading';
 import { lang, onLangChange, setLang, t } from './i18n';
 import { mountImprov } from './improv';
 import { createKeyboard, Keyboard } from './keyboard';
-import { initMidi, MidiStatus, onMidiStatus } from './midi';
+import { initMidi, midiSupported, MidiStatus, onMidiStatus } from './midi';
 import { mountMirror } from './mirror';
 import { mountProgress } from './progressview';
 import { mountSightread } from './sightread';
@@ -18,6 +18,7 @@ app.innerHTML = `
     <div class="brand">Sight<span>line</span></div>
     <nav class="tabs" id="tabs"></nav>
     <button class="lang-toggle" id="lang-toggle"></button>
+    <button class="midi-enable" id="midi-enable"></button>
     <div class="midi-status" id="midi-status"></div>
   </header>
   <main id="view"></main>
@@ -73,13 +74,17 @@ function renderLangBtn() {
 renderLangBtn();
 langBtn.addEventListener('click', () => setLang(lang() === 'en' ? 'fr' : 'en'));
 
-// --- MIDI status ---
+// --- MIDI status + enable button ---
 const midiEl = document.getElementById('midi-status')!;
+const midiBtn = document.getElementById('midi-enable') as HTMLButtonElement;
 let lastStatus: MidiStatus = { state: 'unsupported' };
+let midiConnected = false;
+
 function renderMidi(s: MidiStatus) {
   lastStatus = s;
-  if (s.state === 'ready' && s.devices.length) {
-    midiEl.textContent = t('midi.ready', { devices: s.devices.join(', ') });
+  midiConnected = s.state === 'ready' && s.devices.length > 0;
+  if (midiConnected) {
+    midiEl.textContent = t('midi.ready', { devices: (s as { devices: string[] }).devices.join(', ') });
     midiEl.className = 'midi-status ok';
   } else if (s.state === 'ready') {
     midiEl.textContent = t('midi.none');
@@ -91,9 +96,19 @@ function renderMidi(s: MidiStatus) {
     midiEl.textContent = t('midi.unsupported');
     midiEl.className = 'midi-status warn';
   }
+  // Show the button whenever MIDI isn't actively connected, as long as the
+  // browser has the API at all. Firefox only shows its permission prompt from a
+  // user gesture, so this click is what actually connects the keyboard.
+  const showBtn = midiSupported() && !midiConnected;
+  midiBtn.classList.toggle('hidden', !showBtn);
+  midiBtn.textContent = s.state === 'ready' || s.state === 'denied' ? t('midi.retry') : t('midi.enable');
+  midiBtn.title = t('midi.enableTitle');
 }
+midiBtn.addEventListener('click', () => { unlockAudio(); void initMidi(); });
 onMidiStatus(renderMidi);
-void initMidi();
+// Try once on load (works where no gesture is required); the button covers
+// browsers like Firefox that require a user gesture for the permission prompt.
+if (midiSupported()) void initMidi();
 
 // --- re-render everything on language change ---
 onLangChange(() => {

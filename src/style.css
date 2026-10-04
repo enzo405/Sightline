@@ -83,6 +83,15 @@ body {
 }
 .lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .lang-toggle:active { transform: translateY(1px); }
+.midi-enable {
+  background: var(--accent-grad); border: 1px solid transparent; color: #fff;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  box-shadow: 0 2px 10px rgba(57,135,229,0.3);
+  transition: filter var(--ease), transform var(--ease), box-shadow var(--ease);
+}
+.midi-enable:hover { filter: brightness(1.08); box-shadow: 0 4px 16px rgba(57,135,229,0.45); }
+.midi-enable:active { transform: translateY(1px); }
+.midi-enable.hidden { display: none; }
 
 /* ---------- main ---------- */
 main {
