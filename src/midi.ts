@@ -21,9 +21,10 @@ export function midiSupported(): boolean {
   return typeof navigator !== 'undefined' && !!navigator.requestMIDIAccess;
 }
 
-export function onMidiStatus(fn: StatusListener): void {
+export function onMidiStatus(fn: StatusListener): () => void {
   listeners.add(fn);
   fn(current);
+  return () => listeners.delete(fn);
 }
 
 function setStatus(s: MidiStatus) {

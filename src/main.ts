@@ -9,8 +9,10 @@ import { createKeyboard, Keyboard } from './keyboard';
 import { initMidi, midiSupported, MidiStatus, onMidiStatus } from './midi';
 import { mountMirror } from './mirror';
 import { mountProgress } from './progressview';
+import { mountSettings } from './settingsview';
+import { onSettingsChange, settings } from './settings';
 import { mountSightread } from './sightread';
-import { unlockAudio } from './synth';
+import { setMasterVolume, setPianoOutput, unlockAudio } from './synth';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -31,12 +33,22 @@ const kbdHost = document.getElementById('kbd-host')!;
 let keyboard: Keyboard = createKeyboard();
 kbdHost.appendChild(keyboard.el);
 
+// Apply saved audio settings now and whenever they change.
+function applyAudioSettings() {
+  const s = settings();
+  setPianoOutput(s.pianoSound);
+  setMasterVolume(s.volume);
+}
+applyAudioSettings();
+onSettingsChange(applyAudioSettings);
+
 const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => void }[] = [
   { id: 'mirror', labelKey: 'tab.mirror', mount: mountMirror },
   { id: 'read', labelKey: 'tab.read', mount: mountSightread },
   { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
   { id: 'improv', labelKey: 'tab.improv', mount: (el) => mountImprov(el, keyboard) },
   { id: 'progress', labelKey: 'tab.progress', mount: mountProgress },
+  { id: 'settings', labelKey: 'tab.settings', mount: mountSettings },
 ];
 
 const tabsEl = document.getElementById('tabs')!;

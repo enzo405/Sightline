@@ -55,6 +55,7 @@ const EN: Dict = {
   'tab.fading': '3 · Fading Score',
   'tab.improv': '4 · Improv Lab',
   'tab.progress': 'Progress',
+  'tab.settings': '⚙ Settings',
 
   'midi.loading': 'MIDI: …',
   'midi.ready': 'MIDI: {devices}',
@@ -176,8 +177,19 @@ const EN: Dict = {
   'piece.saints': 'When the Saints Go Marching In',
   'piece.jingle-bells': 'Jingle Bells (chorus)',
 
+  // Settings
+  'settings.title': 'Settings',
+  'settings.intro': 'Everything is saved on this device — no account needed.',
+  'settings.audio': 'Audio',
+  'settings.pianoSound': 'Play piano sound',
+  'settings.pianoSoundHint': 'Turn this off if you hear your own piano directly and only want the app for visuals.',
+  'settings.volume': 'Volume',
+  'settings.language': 'Language',
+  'settings.midi': 'MIDI keyboard',
+  'settings.on': 'On',
+  'settings.off': 'Off',
+
   // Progress
-  'progress.title': 'Your skill map',
   'progress.intro': 'Short daily sessions, visible progress. Everything below is measured from your actual playing in the other three rooms — nothing is self-reported.',
   'progress.level': 'sight-reading level',
   'progress.accuracy': 'accuracy, last 10 exercises',
@@ -216,6 +228,7 @@ const FR: Dict = {
   'tab.fading': '3 · Partition qui s’efface',
   'tab.improv': '4 · Labo d’impro',
   'tab.progress': 'Progression',
+  'tab.settings': '⚙ Réglages',
 
   'midi.loading': 'MIDI : …',
   'midi.ready': 'MIDI : {devices}',
@@ -336,6 +349,18 @@ const FR: Dict = {
   'piece.twinkle': 'Ah ! vous dirai-je, maman',
   'piece.saints': 'When the Saints Go Marching In',
   'piece.jingle-bells': 'Vive le vent (refrain)',
+
+  // Réglages
+  'settings.title': 'Réglages',
+  'settings.intro': 'Tout est enregistré sur cet appareil — aucun compte nécessaire.',
+  'settings.audio': 'Audio',
+  'settings.pianoSound': 'Jouer le son du piano',
+  'settings.pianoSoundHint': 'Désactivez si vous entendez votre propre piano directement et ne voulez l’appli que pour le visuel.',
+  'settings.volume': 'Volume',
+  'settings.language': 'Langue',
+  'settings.midi': 'Clavier MIDI',
+  'settings.on': 'Activé',
+  'settings.off': 'Désactivé',
 
   // Progression
   'progress.title': 'Votre carte de compétences',

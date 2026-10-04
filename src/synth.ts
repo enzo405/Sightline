@@ -9,6 +9,10 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let reverbSend: GainNode | null = null;
 
+// User settings applied to the audio graph (see settings.ts / main.ts).
+let masterVolume = 0.9;
+let pianoOutput = true;
+
 function makeImpulse(ac: AudioContext, seconds: number, decay: number): AudioBuffer {
   const len = Math.floor(ac.sampleRate * seconds);
   const buf = ac.createBuffer(2, len, ac.sampleRate);
@@ -25,7 +29,7 @@ function audio(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = masterVolume;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18;
     master.connect(comp);
@@ -95,6 +99,7 @@ const INHARMONICITY = 0.0004;
 
 /** Piano-ish tone. If `durSec` is given it self-releases; otherwise call pianoOff. */
 export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: number): void {
+  if (!pianoOutput) return; // piano sound disabled in Settings
   const ac = audio();
   const t = when ?? ac.currentTime;
   const f0 = midiToFreq(midi);
@@ -258,4 +263,20 @@ export function hat(when: number): void {
 /** Make sure the AudioContext is unlocked (call from a user gesture). */
 export function unlockAudio(): void {
   audio();
+}
+
+/** Master volume, 0..1 (applied live if the audio graph exists). */
+export function setMasterVolume(v: number): void {
+  masterVolume = Math.max(0, Math.min(1, v));
+  if (master) master.gain.value = masterVolume;
+}
+
+/** Enable/disable the piano voice. Disabling silences any ringing notes. */
+export function setPianoOutput(on: boolean): void {
+  pianoOutput = on;
+  if (!on) {
+    for (const h of active.values()) h.stop();
+    active.clear();
+    sustained.clear();
+  }
 }
