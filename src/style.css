@@ -46,7 +46,7 @@ body {
 
 /* ---------- header ---------- */
 .app-header {
-  display: flex; align-items: center; gap: 20px;
+  display: flex; align-items: center; gap: 14px;
   padding: 10px 18px;
   background: linear-gradient(180deg, rgba(34,34,33,0.92), rgba(26,26,25,0.92));
   backdrop-filter: blur(8px);
@@ -62,10 +62,11 @@ body {
   background: var(--accent-grad); -webkit-background-clip: text;
   background-clip: text; color: transparent;
 }
-.tabs { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.tabs { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
 .tab {
   background: none; border: 1px solid transparent; color: var(--ink-2);
-  padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  white-space: nowrap;
   transition: background var(--ease), color var(--ease), border-color var(--ease);
 }
 .tab:hover { background: var(--panel-2); color: var(--ink); }
@@ -73,19 +74,22 @@ body {
   background: var(--accent-grad); color: #fff; border-color: transparent;
   box-shadow: 0 2px 10px rgba(57,135,229,0.35);
 }
-.midi-status { font-size: 12px; color: var(--muted); max-width: 260px; }
+.midi-status {
+  font-size: 12px; color: var(--muted); max-width: 220px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .midi-status.ok { color: var(--good); }
 .midi-status.warn { color: #fab219; }
 .lang-toggle {
   background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
-  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
   letter-spacing: 0.5px; transition: border-color var(--ease), color var(--ease), background var(--ease);
 }
 .lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .lang-toggle:active { transform: translateY(1px); }
 .midi-enable {
   background: var(--accent-grad); border: 1px solid transparent; color: #fff;
-  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
   box-shadow: 0 2px 10px rgba(57,135,229,0.3);
   transition: filter var(--ease), transform var(--ease), box-shadow var(--ease);
 }
