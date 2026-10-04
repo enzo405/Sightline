@@ -4,6 +4,7 @@
 // Then play it back.
 
 import { input } from './events';
+import { t } from './i18n';
 import { Metronome } from './metronome';
 import { renderScore } from './notation';
 import { countNotes } from './progress';
@@ -13,25 +14,23 @@ import { now, pianoOn, unlockAudio } from './synth';
 export function mountMirror(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="feature-intro">
-      <h2>Play-to-Notation Mirror</h2>
-      <p>Play something you already know — from your MIDI piano, the on-screen keys, or your
-      computer keyboard (<code>A</code>–<code>;</code> row = C4–E5). Hit <b>Stop</b> and see it written out.
-      The rhythm grid locks onto your <em>first note</em>, so start cleanly; the metronome helps you stay on it.</p>
+      <h2>${t('mirror.title')}</h2>
+      <p>${t('mirror.intro')}</p>
     </div>
     <div class="toolbar">
-      <label>Tempo <input type="number" id="mir-bpm" min="40" max="200" value="90" class="num"> BPM</label>
-      <label>Grid
+      <label>${t('mirror.tempo')} <input type="number" id="mir-bpm" min="40" max="200" value="90" class="num"> ${t('mirror.bpm')}</label>
+      <label>${t('mirror.grid')}
         <select id="mir-grid">
-          <option value="8" selected>Eighth notes</option>
-          <option value="16">Sixteenth notes</option>
+          <option value="8" selected>${t('mirror.grid8')}</option>
+          <option value="16">${t('mirror.grid16')}</option>
         </select>
       </label>
-      <label class="check"><input type="checkbox" id="mir-click" checked> Metronome while recording</label>
-      <button id="mir-rec" class="btn primary">● Record</button>
-      <button id="mir-play" class="btn" disabled>▶ Play back</button>
-      <span id="mir-status" class="status-text">Ready — press Record, then play.</span>
+      <label class="check"><input type="checkbox" id="mir-click" checked> ${t('mirror.metronome')}</label>
+      <button id="mir-rec" class="btn primary">${t('mirror.record')}</button>
+      <button id="mir-play" class="btn" disabled>${t('mirror.play')}</button>
+      <span id="mir-status" class="status-text">${t('mirror.ready')}</span>
     </div>
-    <div id="mir-score" class="score-paper empty">Your notation will appear here.</div>
+    <div id="mir-score" class="score-paper empty">${t('mirror.placeholder')}</div>
   `;
 
   const bpmEl = root.querySelector('#mir-bpm') as HTMLInputElement;
@@ -54,7 +53,7 @@ export function mountMirror(root: HTMLElement): () => void {
     const n: RawNote = { midi: e.midi, tOn: e.time, tOff: e.time + 200 };
     raw.push(n);
     open.set(e.midi, n);
-    statusEl.textContent = `Recording… ${raw.length} note${raw.length === 1 ? '' : 's'}`;
+    statusEl.textContent = t('mirror.recording', { n: raw.length, noteWord: raw.length === 1 ? t('mirror.note') : t('mirror.notes') });
   });
   const unsubOff = input.onNoteOff((e) => {
     const n = open.get(e.midi);
@@ -71,7 +70,7 @@ export function mountMirror(root: HTMLElement): () => void {
   function stopPlayback() {
     for (const t of playTimers) clearTimeout(t);
     playTimers = [];
-    playBtn.textContent = '▶ Play back';
+    playBtn.textContent = t('mirror.play');
   }
 
   function startRecording() {
@@ -80,17 +79,17 @@ export function mountMirror(root: HTMLElement): () => void {
     recording = true;
     raw = [];
     open.clear();
-    recBtn.textContent = '■ Stop';
+    recBtn.textContent = t('mirror.stop');
     recBtn.classList.add('recording');
     playBtn.disabled = true;
-    statusEl.textContent = 'Recording… play your piece.';
+    statusEl.textContent = t('mirror.recordingStart');
     if (clickEl.checked) metro.start(clampBpm());
   }
 
   function stopRecording() {
     recording = false;
     metro.stop();
-    recBtn.textContent = '● Record';
+    recBtn.textContent = t('mirror.record');
     recBtn.classList.remove('recording');
     const tEnd = performance.now();
     for (const n of open.values()) n.tOff = tEnd;
@@ -98,13 +97,13 @@ export function mountMirror(root: HTMLElement): () => void {
 
     result = quantize(raw, clampBpm(), gridEl.value as '8' | '16');
     if (!result) {
-      statusEl.textContent = 'Nothing recorded — press Record and play some notes.';
+      statusEl.textContent = t('mirror.nothing');
       return;
     }
     scoreEl.classList.remove('empty');
     renderScore(scoreEl, result.score, { measuresPerLine: 4 });
     const bars = result.score.measures.length;
-    statusEl.textContent = `Captured ${raw.length} notes across ${bars} bar${bars === 1 ? '' : 's'}. This is what you played.`;
+    statusEl.textContent = t('mirror.captured', { n: raw.length, bars, barWord: bars === 1 ? t('mirror.bar') : t('mirror.bars') });
     playBtn.disabled = false;
     countNotes(raw.length);
   }
@@ -124,7 +123,7 @@ export function mountMirror(root: HTMLElement): () => void {
         endSlot = Math.max(endSlot, c.slot + c.durSlots);
       }
     }
-    playBtn.textContent = '■ Stop playback';
+    playBtn.textContent = t('mirror.stopPlay');
     playTimers.push(window.setTimeout(stopPlayback, (endSlot * slotSec + 0.6) * 1000));
   });
 

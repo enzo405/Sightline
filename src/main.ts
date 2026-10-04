@@ -1,11 +1,12 @@
-// Sightline — app shell: header, MIDI status, tabs, global keyboard.
+// Sightline — app shell: header, language switch, MIDI status, tabs, keyboard.
 
 import './style.css';
 import { input } from './events';
 import { mountFading } from './fading';
+import { lang, onLangChange, setLang, t } from './i18n';
 import { mountImprov } from './improv';
-import { createKeyboard } from './keyboard';
-import { initMidi, onMidiStatus } from './midi';
+import { createKeyboard, Keyboard } from './keyboard';
+import { initMidi, MidiStatus, onMidiStatus } from './midi';
 import { mountMirror } from './mirror';
 import { mountProgress } from './progressview';
 import { mountSightread } from './sightread';
@@ -16,21 +17,25 @@ app.innerHTML = `
   <header class="app-header">
     <div class="brand">Sight<span>line</span></div>
     <nav class="tabs" id="tabs"></nav>
-    <div class="midi-status" id="midi-status">MIDI: …</div>
+    <button class="lang-toggle" id="lang-toggle"></button>
+    <div class="midi-status" id="midi-status"></div>
   </header>
   <main id="view"></main>
   <footer id="kbd-host"></footer>
 `;
 
-const keyboard = createKeyboard();
-document.getElementById('kbd-host')!.appendChild(keyboard.el);
+document.documentElement.lang = lang();
 
-const TABS: { id: string; label: string; mount: (el: HTMLElement) => () => void }[] = [
-  { id: 'mirror', label: '1 · Mirror', mount: mountMirror },
-  { id: 'read', label: '2 · Sight-Reading', mount: mountSightread },
-  { id: 'fading', label: '3 · Fading Score', mount: mountFading },
-  { id: 'improv', label: '4 · Improv Lab', mount: (el) => mountImprov(el, keyboard) },
-  { id: 'progress', label: 'Progress', mount: mountProgress },
+const kbdHost = document.getElementById('kbd-host')!;
+let keyboard: Keyboard = createKeyboard();
+kbdHost.appendChild(keyboard.el);
+
+const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => void }[] = [
+  { id: 'mirror', labelKey: 'tab.mirror', mount: mountMirror },
+  { id: 'read', labelKey: 'tab.read', mount: mountSightread },
+  { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
+  { id: 'improv', labelKey: 'tab.improv', mount: (el) => mountImprov(el, keyboard) },
+  { id: 'progress', labelKey: 'tab.progress', mount: mountProgress },
 ];
 
 const tabsEl = document.getElementById('tabs')!;
@@ -38,8 +43,8 @@ const viewEl = document.getElementById('view')!;
 let unmount: (() => void) | null = null;
 let activeTab = '';
 
-function show(id: string): void {
-  if (id === activeTab) return;
+function show(id: string, force = false): void {
+  if (id === activeTab && !force) return;
   activeTab = id;
   unmount?.();
   keyboard.clearHighlights();
@@ -50,32 +55,62 @@ function show(id: string): void {
   unmount = tab.mount(viewEl);
 }
 
-for (const t of TABS) {
+for (const tab of TABS) {
   const b = document.createElement('button');
   b.className = 'tab';
-  b.dataset.id = t.id;
-  b.textContent = t.label;
-  b.addEventListener('click', () => { unlockAudio(); show(t.id); });
+  b.dataset.id = tab.id;
+  b.textContent = t(tab.labelKey);
+  b.addEventListener('click', () => { unlockAudio(); show(tab.id); });
   tabsEl.appendChild(b);
 }
 
+// --- language toggle ---
+const langBtn = document.getElementById('lang-toggle') as HTMLButtonElement;
+function renderLangBtn() {
+  langBtn.textContent = t('lang.toggle');
+  langBtn.title = t('lang.toggleTitle');
+}
+renderLangBtn();
+langBtn.addEventListener('click', () => setLang(lang() === 'en' ? 'fr' : 'en'));
+
+// --- MIDI status ---
 const midiEl = document.getElementById('midi-status')!;
-onMidiStatus((s) => {
+let lastStatus: MidiStatus = { state: 'unsupported' };
+function renderMidi(s: MidiStatus) {
+  lastStatus = s;
   if (s.state === 'ready' && s.devices.length) {
-    midiEl.textContent = `MIDI: ${s.devices.join(', ')}`;
+    midiEl.textContent = t('midi.ready', { devices: s.devices.join(', ') });
     midiEl.className = 'midi-status ok';
   } else if (s.state === 'ready') {
-    midiEl.textContent = 'MIDI: no device — use on-screen keys or A–; row';
+    midiEl.textContent = t('midi.none');
     midiEl.className = 'midi-status';
   } else if (s.state === 'denied') {
-    midiEl.textContent = 'MIDI: permission denied';
+    midiEl.textContent = t('midi.denied');
     midiEl.className = 'midi-status warn';
   } else {
-    midiEl.textContent = 'MIDI: not supported (use Chrome/Edge) — on-screen keys work';
+    midiEl.textContent = t('midi.unsupported');
     midiEl.className = 'midi-status warn';
   }
-});
+}
+onMidiStatus(renderMidi);
 void initMidi();
+
+// --- re-render everything on language change ---
+onLangChange(() => {
+  document.documentElement.lang = lang();
+  renderLangBtn();
+  tabsEl.querySelectorAll('.tab').forEach((b) => {
+    const tab = TABS.find((x) => x.id === (b as HTMLElement).dataset.id);
+    if (tab) (b as HTMLButtonElement).textContent = t(tab.labelKey);
+  });
+  renderMidi(lastStatus);
+  // rebuild the keyboard so its note labels follow the language
+  const held = activeTab;
+  keyboard.destroy();
+  keyboard = createKeyboard();
+  kbdHost.appendChild(keyboard.el);
+  show(held, true);
+});
 
 // unlock audio on first interaction anywhere
 window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -92,4 +127,5 @@ show('mirror');
     setTimeout(() => input.noteOff(m), holdMs);
   },
   show,
+  setLang,
 };

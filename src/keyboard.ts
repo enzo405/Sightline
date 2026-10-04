@@ -4,8 +4,8 @@
 // Improv Lab (chord tones / scale tones).
 
 import { input } from './events';
+import { noteName } from './i18n';
 import { pianoOn, pianoOff } from './synth';
-import { midiToName } from './theory';
 
 const LOW = 36;  // C2
 const HIGH = 96; // C7
@@ -50,7 +50,7 @@ export function createKeyboard(): Keyboard {
       if (m % 12 === 0) {
         const lbl = document.createElement('span');
         lbl.className = 'pkey-label';
-        lbl.textContent = midiToName(m);
+        lbl.textContent = noteName(m);
         key.appendChild(lbl);
       }
       whiteIndex++;

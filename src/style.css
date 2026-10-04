@@ -47,6 +47,12 @@ html, body {
 .midi-status { font-size: 12px; color: var(--muted); max-width: 260px; }
 .midi-status.ok { color: var(--good); }
 .midi-status.warn { color: #fab219; }
+.lang-toggle {
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- main ---------- */
 main {

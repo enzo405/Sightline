@@ -6,7 +6,8 @@ import {
   Accidental, Annotation, AnnotationVerticalJustify, Beam, Dot, Formatter,
   Renderer, Stave, StaveConnector, StaveNote, StaveTie, Voice,
 } from 'vexflow';
-import { KEYS, midiToName, midiToVexKey } from './theory';
+import { KEYS, midiToVexKey } from './theory';
+import { noteName } from './i18n';
 
 export type Dur = 'w' | 'h' | 'q' | '8' | '16' | 'hd' | 'qd' | '8d';
 
@@ -180,7 +181,7 @@ export function renderScore(container: HTMLElement, score: Score, opts: RenderOp
             }
             if (!n.rest && !hidden) {
               if (opts.showNames) {
-                const name = n.midis.map((mm) => midiToName(mm, keyInfo.preferFlats).replace(/-?\d+$/, '')).join(' ');
+                const name = n.midis.map((mm) => noteName(mm, keyInfo.preferFlats).replace(/-?\d+$/, '')).join(' ');
                 sn.addModifier(new Annotation(name).setFont('Arial', 10)
                   .setVerticalJustification(AnnotationVerticalJustify.TOP));
               }

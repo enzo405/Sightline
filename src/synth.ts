@@ -1,9 +1,25 @@
-// Web Audio: a simple piano-ish synth, plus metronome / backing-track sounds.
-// No samples — two detuned oscillators through a lowpass with an exponential
-// decay is plenty for practice feedback.
+// Web Audio: a piano-ish synth, plus metronome / backing-track sounds.
+// The piano voice is additive: several harmonic partials per note, each with
+// its own decay, mild inharmonicity (stretched partials), two detuned unison
+// voices, a velocity-driven brightness filter, a hammer-noise transient, and a
+// light reverb — no samples, but much closer to a real string than a single
+// oscillator.
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+let reverbSend: GainNode | null = null;
+
+function makeImpulse(ac: AudioContext, seconds: number, decay: number): AudioBuffer {
+  const len = Math.floor(ac.sampleRate * seconds);
+  const buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return buf;
+}
 
 function audio(): AudioContext {
   if (!ctx) {
@@ -14,6 +30,17 @@ function audio(): AudioContext {
     comp.threshold.value = -18;
     master.connect(comp);
     comp.connect(ctx.destination);
+
+    // small room reverb, fed by a send bus
+    const conv = ctx.createConvolver();
+    conv.buffer = makeImpulse(ctx, 1.5, 2.6);
+    reverbSend = ctx.createGain();
+    reverbSend.gain.value = 1;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.12;
+    reverbSend.connect(conv);
+    conv.connect(wet);
+    wet.connect(master);
   }
   if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
@@ -24,6 +51,11 @@ function out(): GainNode {
   return master!;
 }
 
+function reverb(): GainNode {
+  audio();
+  return reverbSend!;
+}
+
 export function now(): number {
   return audio().currentTime;
 }
@@ -32,52 +64,97 @@ function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+let noiseBuf: AudioBuffer | null = null;
+function noise(ac: AudioContext): AudioBuffer {
+  if (!noiseBuf || noiseBuf.sampleRate !== ac.sampleRate) {
+    noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.2), ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+
 interface Handle { stop: () => void }
 
 const active = new Map<number, Handle>();
+
+// Relative amplitude of each harmonic partial (1st = fundamental).
+const PARTIAL_AMPS = [1, 0.62, 0.45, 0.30, 0.18, 0.11, 0.07];
+// Two unison voices: the main one is full; the detuned one carries only the
+// loud low partials, for shimmer without doubling the oscillator count.
+const VOICES = [
+  { cents: -2.5, count: PARTIAL_AMPS.length },
+  { cents: 3.0, count: 3 },
+];
+const INHARMONICITY = 0.0004;
 
 /** Piano-ish tone. If `durSec` is given it self-releases; otherwise call pianoOff. */
 export function pianoOn(midi: number, velocity = 90, when?: number, durSec?: number): void {
   const ac = audio();
   const t = when ?? ac.currentTime;
-  const freq = midiToFreq(midi);
-  const vel = Math.max(0.1, Math.min(1, velocity / 127));
+  const f0 = midiToFreq(midi);
+  const vel = Math.max(0.05, Math.min(1, velocity / 127));
 
-  const gain = ac.createGain();
-  const filter = ac.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = Math.min(8000, freq * 6);
-  filter.Q.value = 0.5;
+  const noteGain = ac.createGain();
+  noteGain.gain.value = 1;
 
-  const o1 = ac.createOscillator();
-  o1.type = 'triangle';
-  o1.frequency.value = freq;
-  const o2 = ac.createOscillator();
-  o2.type = 'sine';
-  o2.frequency.value = freq * 2;
-  const g2 = ac.createGain();
-  g2.gain.value = 0.25;
+  // Brightness: opens with how hard you play, then dulls as the string rings.
+  const bright = ac.createBiquadFilter();
+  bright.type = 'lowpass';
+  bright.Q.value = 0.2;
+  const openHz = Math.min(12000, 1700 + vel * 7000 + f0 * 1.5);
+  const dullHz = Math.min(openHz, Math.max(700, 800 + f0 * 1.2));
+  bright.frequency.setValueAtTime(openHz, t);
+  bright.frequency.exponentialRampToValueAtTime(dullHz, t + 0.7);
 
-  o1.connect(filter);
-  o2.connect(g2);
-  g2.connect(filter);
-  filter.connect(gain);
-  gain.connect(out());
+  noteGain.connect(bright);
+  bright.connect(out());
+  bright.connect(reverb());
 
-  const peak = 0.35 * vel;
-  const decay = Math.max(1.0, 4.5 - midi / 30); // low notes ring longer
-  gain.gain.setValueAtTime(0, t);
-  gain.gain.linearRampToValueAtTime(peak, t + 0.008);
-  gain.gain.exponentialRampToValueAtTime(0.0008, t + decay);
+  const baseDecay = Math.max(0.8, 5.2 - midi / 22); // low notes ring longer
+  const peakScale = 0.26 * vel;
 
-  const hardStop = t + decay + 0.1;
-  o1.start(t); o2.start(t);
-  o1.stop(hardStop); o2.stop(hardStop);
+  for (const voice of VOICES) {
+    const mult = Math.pow(2, voice.cents / 1200);
+    for (let i = 0; i < voice.count; i++) {
+      const n = i + 1;
+      const pf = f0 * n * Math.sqrt(1 + INHARMONICITY * n * n) * mult;
+      if (pf > ac.sampleRate * 0.47) continue; // avoid aliasing near Nyquist
+      const o = ac.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = pf;
+      const g = ac.createGain();
+      const peak = (PARTIAL_AMPS[i] * peakScale) / VOICES.length;
+      const pDecay = baseDecay / (1 + 0.8 * (n - 1)); // upper partials die faster
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.00008, peak * 0.0006), t + pDecay);
+      o.connect(g);
+      g.connect(noteGain);
+      o.start(t);
+      o.stop(t + pDecay + 0.05);
+    }
+  }
+
+  // Hammer transient: a short, soft, lowpassed noise click at onset.
+  const src = ac.createBufferSource();
+  src.buffer = noise(ac);
+  const nf = ac.createBiquadFilter();
+  nf.type = 'lowpass';
+  nf.frequency.value = Math.min(5000, f0 * 4);
+  const ng = ac.createGain();
+  ng.gain.setValueAtTime(0.06 * vel, t);
+  ng.gain.exponentialRampToValueAtTime(0.0004, t + 0.055);
+  src.connect(nf);
+  nf.connect(ng);
+  ng.connect(noteGain);
+  src.start(t);
+  src.stop(t + 0.08);
 
   const release = (rt: number) => {
-    gain.gain.cancelScheduledValues(rt);
-    gain.gain.setValueAtTime(gain.gain.value, rt);
-    gain.gain.exponentialRampToValueAtTime(0.0008, rt + 0.15);
+    noteGain.gain.cancelScheduledValues(rt);
+    noteGain.gain.setValueAtTime(noteGain.gain.value, rt);
+    noteGain.gain.exponentialRampToValueAtTime(0.0005, rt + 0.14);
   };
 
   if (durSec !== undefined) {

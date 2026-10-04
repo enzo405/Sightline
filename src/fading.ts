@@ -3,29 +3,30 @@
 // layer of support until whole measures go blank and you play from reading
 // flow + memory. In hidden bars, notes materialize as you play them.
 
+import { t } from './i18n';
 import { mainStream, renderScore, NoteStatus } from './notation';
-import { pieceScore, PIECES } from './pieces';
+import { pieceScore, PIECES, pieceTitle } from './pieces';
 import { countNotes, progress, save } from './progress';
 import { PlayThrough } from './playthrough';
 
 interface FadeLevel {
-  label: string;
+  labelKey: string;
   showNames: boolean;
   showFingering: boolean;
   hide: (measureCount: number) => Set<number>;
 }
 
 export const FADE_LEVELS: FadeLevel[] = [
-  { label: 'Full hints — note names + fingering', showNames: true, showFingering: true, hide: () => new Set() },
-  { label: 'Fingering only — note names are gone', showNames: false, showFingering: true, hide: () => new Set() },
-  { label: 'Notation only — no hints left', showNames: false, showFingering: false, hide: () => new Set() },
+  { labelKey: 'fade.level1', showNames: true, showFingering: true, hide: () => new Set() },
+  { labelKey: 'fade.level2', showNames: false, showFingering: true, hide: () => new Set() },
+  { labelKey: 'fade.level3', showNames: false, showFingering: false, hide: () => new Set() },
   {
-    label: 'Reading ahead — every 4th bar is blank',
+    labelKey: 'fade.level4',
     showNames: false, showFingering: false,
     hide: (n) => new Set(Array.from({ length: n }, (_, i) => i).filter((i) => i % 4 === 2)),
   },
   {
-    label: 'From memory — every other bar is blank',
+    labelKey: 'fade.level5',
     showNames: false, showFingering: false,
     hide: (n) => new Set(Array.from({ length: n }, (_, i) => i).filter((i) => i % 2 === 1)),
   },
@@ -34,18 +35,15 @@ export const FADE_LEVELS: FadeLevel[] = [
 export function mountFading(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="feature-intro">
-      <h2>Fading Score</h2>
-      <p>Pick a piece you know by ear. Level 1 shows every hint; each pass at
-      <b>≥90% accuracy</b> fades one layer — first note names, then fingering, then whole bars go blank
-      (play them from memory: the notes reappear as you get them right). This trains reading ahead
-      and playing through instead of stopping at every bar.</p>
+      <h2>${t('fade.title')}</h2>
+      <p>${t('fade.intro')}</p>
     </div>
     <div class="toolbar">
-      <label>Piece
-        <select id="fd-piece">${PIECES.map((p) => `<option value="${p.id}">${p.title}</option>`).join('')}</select>
+      <label>${t('fade.piece')}
+        <select id="fd-piece">${PIECES.map((p) => `<option value="${p.id}">${pieceTitle(p.id)}</option>`).join('')}</select>
       </label>
-      <span class="level-badge">Stage <b id="fd-level"></b>/5</span>
-      <button id="fd-restart" class="btn primary">Restart piece</button>
+      <span class="level-badge">${t('fade.stage')} <b id="fd-level"></b>/5</span>
+      <button id="fd-restart" class="btn primary">${t('fade.restart')}</button>
       <span id="fd-live" class="status-text"></span>
     </div>
     <p class="fade-desc" id="fd-desc"></p>
@@ -76,10 +74,10 @@ export function mountFading(root: HTMLElement): () => void {
     const score = pieceScore(id);
     const hidden = fade.hide(score.measures.length);
     levelEl.textContent = String(lvlIdx + 1);
-    descEl.textContent = fade.label;
+    descEl.textContent = t(fade.labelKey);
 
     const stream = mainStream(score);
-    liveEl.textContent = `Note 1/${stream.length}`;
+    liveEl.textContent = t('read.noteCount', { n: 1, total: stream.length });
 
     const rerender = (statuses: Map<number, NoteStatus>) => {
       renderScore(scoreEl, score, {
@@ -94,7 +92,7 @@ export function mountFading(root: HTMLElement): () => void {
     engine = new PlayThrough(stream, {
       onUpdate: (statuses, pos) => {
         rerender(statuses);
-        if (pos < stream.length) liveEl.textContent = `Note ${pos + 1}/${stream.length}`;
+        if (pos < stream.length) liveEl.textContent = t('read.noteCount', { n: pos + 1, total: stream.length });
       },
       onComplete: (res) => {
         const pct = Math.round(res.accuracy * 100);
@@ -104,20 +102,20 @@ export function mountFading(root: HTMLElement): () => void {
         let msg: string;
         if (res.accuracy >= 0.9 && entry.level < FADE_LEVELS.length - 1) {
           entry.level++;
-          msg = `🎉 ${pct}% — layer faded! Next: <b>${FADE_LEVELS[entry.level].label}</b>`;
+          msg = t('fade.faded', { pct, next: t(FADE_LEVELS[entry.level].labelKey) });
         } else if (res.accuracy >= 0.9) {
-          msg = `🏆 ${pct}% — you own this piece from memory. Mastered!`;
+          msg = t('fade.mastered', { pct });
         } else {
-          msg = `${pct}% — you need ≥90% to fade the next layer. Run it again.`;
+          msg = t('fade.retry', { pct });
         }
         p.fading[id] = entry;
         save();
         countNotes(stream.length);
-        liveEl.textContent = 'Done!';
+        liveEl.textContent = t('read.done');
         resultsEl.classList.remove('hidden');
         resultsEl.innerHTML = `
           <p class="result-note">${msg}</p>
-          <button class="btn primary" id="fd-again">Play again →</button>
+          <button class="btn primary" id="fd-again">${t('fade.again')}</button>
         `;
         (resultsEl.querySelector('#fd-again') as HTMLButtonElement).addEventListener('click', start);
       },

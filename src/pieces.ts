@@ -3,6 +3,7 @@
 // ['rest', duration]. All 4/4, right hand.
 
 import { Dur, Measure, Score, ScoreNote } from './notation';
+import { t } from './i18n';
 import { nameToMidi } from './theory';
 
 type Cell = [string, Dur, string?];
@@ -110,4 +111,9 @@ export const PIECES: Piece[] = [
 export function pieceScore(id: string): Score {
   const p = PIECES.find((x) => x.id === id)!;
   return toScore(p);
+}
+
+/** Language-aware display title for a piece. */
+export function pieceTitle(id: string): string {
+  return t(`piece.${id}`);
 }

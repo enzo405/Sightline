@@ -8,6 +8,24 @@ export function midiToName(midi: number, preferFlats = false): string {
   return names[midi % 12] + (Math.floor(midi / 12) - 1);
 }
 
+// French solfège note names (Do Ré Mi Fa Sol La Si), for display.
+const SOLFEGE_SHARP = ['Do', 'Do♯', 'Ré', 'Ré♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'];
+const SOLFEGE_FLAT = ['Do', 'Ré♭', 'Ré', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'];
+
+/** French solfège name with octave, e.g. "Do4", "Si♭3". */
+export function midiToNameFr(midi: number, preferFlats = false): string {
+  const names = preferFlats ? SOLFEGE_FLAT : SOLFEGE_SHARP;
+  return names[midi % 12] + (Math.floor(midi / 12) - 1);
+}
+
+/** French tonic for a key-signature name, e.g. "Bb" -> "Si♭". */
+export function keyNameFr(key: string): string {
+  const info = KEYS[key];
+  const pc = info ? info.scale[0] : 0;
+  const names = info?.preferFlats ? SOLFEGE_FLAT : SOLFEGE_SHARP;
+  return names[pc];
+}
+
 /** VexFlow key string like "c#/4" or "eb/3". */
 export function midiToVexKey(midi: number, preferFlats = false): string {
   const names = preferFlats ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;

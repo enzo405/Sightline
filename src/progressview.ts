@@ -4,7 +4,8 @@
 // palette (dark mode steps) with hover tooltips and a table fallback.
 
 import { FADE_LEVELS } from './fading';
-import { PIECES } from './pieces';
+import { keyName, t } from './i18n';
+import { PIECES, pieceTitle } from './pieces';
 import { progress, streakDays } from './progress';
 
 // reference palette, dark-surface steps
@@ -104,12 +105,12 @@ function keyBars(host: HTMLElement, rows: { key: string; pct: number; total: num
       d: `M${cx - bw / 2},${y0} V${y0 - bh + 4} Q${cx - bw / 2},${y0 - bh} ${cx - bw / 2 + 4},${y0 - bh} H${cx + bw / 2 - 4} Q${cx + bw / 2},${y0 - bh} ${cx + bw / 2},${y0 - bh + 4} V${y0} Z`,
       fill: C.series,
     });
-    bar.addEventListener('mousemove', (e) => showTip(e.clientX, e.clientY, `<b>${r.pct}%</b><span>${r.key} major · ${r.total} notes</span>`));
+    bar.addEventListener('mousemove', (e) => showTip(e.clientX, e.clientY, `<b>${r.pct}%</b><span>${t('progress.keyTooltip', { key: keyName(r.key), total: r.total })}</span>`));
     bar.addEventListener('mouseleave', hideTip);
     svg.appendChild(bar);
-    const t = svgEl('text', { x: cx, y: h - 8, fill: C.ink2, 'font-size': 11, 'text-anchor': 'middle' });
-    t.textContent = r.key;
-    svg.appendChild(t);
+    const t2 = svgEl('text', { x: cx, y: h - 8, fill: C.ink2, 'font-size': 11, 'text-anchor': 'middle' });
+    t2.textContent = keyName(r.key);
+    svg.appendChild(t2);
   });
   host.appendChild(svg);
 }
@@ -139,34 +140,33 @@ export function mountProgress(root: HTMLElement): () => void {
 
   root.innerHTML = `
     <div class="feature-intro">
-      <h2>Your skill map</h2>
-      <p>Short daily sessions, visible progress. Everything below is measured from your actual
-      playing in the other three rooms — nothing is self-reported.</p>
+      <h2>${t('progress.title')}</h2>
+      <p>${t('progress.intro')}</p>
     </div>
     <div class="result-tiles wide">
-      <div class="tile"><div class="tile-num">${p.sightread.level}<span class="tile-sub">/10</span></div><div class="tile-label">sight-reading level</div></div>
-      <div class="tile"><div class="tile-num">${avgAcc !== null ? avgAcc + '%' : '—'}</div><div class="tile-label">accuracy, last 10 exercises</div></div>
-      <div class="tile"><div class="tile-num">${bestNpm ?? '—'}</div><div class="tile-label">best reading speed (notes/min)</div></div>
-      <div class="tile"><div class="tile-num">${streak}</div><div class="tile-label">day streak</div></div>
-      <div class="tile"><div class="tile-num">${p.totals.notesPlayed.toLocaleString()}</div><div class="tile-label">notes played in Sightline</div></div>
+      <div class="tile"><div class="tile-num">${p.sightread.level}<span class="tile-sub">/10</span></div><div class="tile-label">${t('progress.level')}</div></div>
+      <div class="tile"><div class="tile-num">${avgAcc !== null ? avgAcc + '%' : '—'}</div><div class="tile-label">${t('progress.accuracy')}</div></div>
+      <div class="tile"><div class="tile-num">${bestNpm ?? '—'}</div><div class="tile-label">${t('progress.bestSpeed')}</div></div>
+      <div class="tile"><div class="tile-num">${streak}</div><div class="tile-label">${t('progress.streak')}</div></div>
+      <div class="tile"><div class="tile-num">${p.totals.notesPlayed.toLocaleString()}</div><div class="tile-label">${t('progress.notesPlayed')}</div></div>
     </div>
     <div class="viz-grid">
       <div class="panel viz-root">
-        <h3>Sight-reading accuracy trend</h3>
+        <h3>${t('progress.trendTitle')}</h3>
         <div id="pg-trend"></div>
         <div id="pg-trend-table"></div>
       </div>
       <div class="panel viz-root">
-        <h3>Accuracy by key signature</h3>
+        <h3>${t('progress.keysTitle')}</h3>
         <div id="pg-keys"></div>
         <div id="pg-keys-table"></div>
       </div>
       <div class="panel">
-        <h3>Fading Score stages</h3>
+        <h3>${t('progress.fadingTitle')}</h3>
         <div id="pg-fading"></div>
       </div>
       <div class="panel">
-        <h3>Improvisation</h3>
+        <h3>${t('progress.improvTitle')}</h3>
         <div id="pg-improv"></div>
       </div>
     </div>
@@ -175,39 +175,39 @@ export function mountProgress(root: HTMLElement): () => void {
   const trendHost = root.querySelector('#pg-trend') as HTMLElement;
   if (recent.length >= 2) {
     const pts = recent.map((r) => ({
-      label: `L${r.level} · ${r.key} major · ${new Date(r.date).toLocaleDateString()}`,
+      label: t('progress.trendLabel', { level: r.level, key: keyName(r.key), date: new Date(r.date).toLocaleDateString() }),
       pct: Math.round(r.accuracy * 100),
     }));
     trendChart(trendHost, pts);
     (root.querySelector('#pg-trend-table') as HTMLElement).innerHTML =
-      tableView(recent.map((r) => [new Date(r.date).toLocaleDateString(), String(r.level), r.key, Math.round(r.accuracy * 100) + '%', String(r.notesPerMin)]),
-        ['Date', 'Level', 'Key', 'Accuracy', 'Notes/min']);
+      tableView(recent.map((r) => [new Date(r.date).toLocaleDateString(), String(r.level), keyName(r.key), Math.round(r.accuracy * 100) + '%', String(r.notesPerMin)]),
+        [t('progress.colDate'), t('progress.colLevel'), t('progress.colKey'), t('progress.colAccuracy'), t('progress.colNpm')]);
   } else {
-    trendHost.innerHTML = `<p class="muted">Complete a couple of sight-reading exercises and your trend appears here.</p>`;
+    trendHost.innerHTML = `<p class="muted">${t('progress.trendEmpty')}</p>`;
   }
 
   const keysHost = root.querySelector('#pg-keys') as HTMLElement;
   if (keyRows.length) {
     keyBars(keysHost, keyRows.slice(0, 9));
     (root.querySelector('#pg-keys-table') as HTMLElement).innerHTML =
-      tableView(keyRows.map((r) => [r.key + ' major', r.pct + '%', String(r.total)]), ['Key', 'Accuracy', 'Notes seen']);
+      tableView(keyRows.map((r) => [t('progress.keyMajor', { key: keyName(r.key) }), r.pct + '%', String(r.total)]), [t('progress.colKey'), t('progress.colAccuracy'), t('progress.colNpm')]);
   } else {
-    keysHost.innerHTML = `<p class="muted">No key data yet — the sight-reading room fills this in.</p>`;
+    keysHost.innerHTML = `<p class="muted">${t('progress.keysEmpty')}</p>`;
   }
 
   (root.querySelector('#pg-fading') as HTMLElement).innerHTML = PIECES.map((piece) => {
     const st = p.fading[piece.id];
     const stage = (st?.level ?? 0) + (st && st.level >= FADE_LEVELS.length - 1 ? 1 : 0);
     const stars = FADE_LEVELS.map((_, i) => `<span class="fade-dot${i < stage ? ' on' : ''}"></span>`).join('');
-    return `<div class="fade-row"><span>${piece.title}</span><span class="fade-dots">${stars}</span>
-      <span class="muted">${st ? `${st.completions} run${st.completions === 1 ? '' : 's'}` : 'not started'}</span></div>`;
+    return `<div class="fade-row"><span>${pieceTitle(piece.id)}</span><span class="fade-dots">${stars}</span>
+      <span class="muted">${st ? t(st.completions === 1 ? 'progress.run' : 'progress.runs', { n: st.completions }) : t('progress.notStarted')}</span></div>`;
   }).join('');
 
   (root.querySelector('#pg-improv') as HTMLElement).innerHTML = `
     <div class="stat-row">
-      <div class="tile"><div class="tile-num">${improvLast ? improvLast.chordTonePct + '%' : '—'}</div><div class="tile-label">chord tones, last session${improvLast ? ` (${improvLast.progression})` : ''}</div></div>
-      <div class="tile"><div class="tile-num">${crBest !== null ? crBest + '/5' : '—'}</div><div class="tile-label">best call &amp; response</div></div>
-      <div class="tile"><div class="tile-num">${p.improv.sessions.length}</div><div class="tile-label">improv sessions</div></div>
+      <div class="tile"><div class="tile-num">${improvLast ? improvLast.chordTonePct + '%' : '—'}</div><div class="tile-label">${t('progress.chordTonesLast', { prog: improvLast ? ` (${improvLast.progression})` : '' })}</div></div>
+      <div class="tile"><div class="tile-num">${crBest !== null ? crBest + '/5' : '—'}</div><div class="tile-label">${t('progress.bestCall')}</div></div>
+      <div class="tile"><div class="tile-num">${p.improv.sessions.length}</div><div class="tile-label">${t('progress.improvSessions')}</div></div>
     </div>`;
 
   return () => hideTip();

@@ -4,6 +4,7 @@
 // difficulty level adapts to hold you near 85% accuracy.
 
 import { generateExercise, Exercise } from './generator';
+import { keyName, t } from './i18n';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { PlayResult, PlayThrough } from './playthrough';
 import { countNotes, progress, recordSightread, save, today } from './progress';
@@ -11,22 +12,19 @@ import { countNotes, progress, recordSightread, save, today } from './progress';
 export function mountSightread(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="feature-intro">
-      <h2>Adaptive Sight-Reading</h2>
-      <p>Play the highlighted note (blue) at your own steady pulse. Correct notes turn
-      <span class="tag-green">green</span>, misses flash <span class="tag-red">red</span> — the exercise
-      targets ~85% accuracy: score above 92% and you level up, below 75% and it eases off.
-      Rhythm is judged against your own tempo after you finish.</p>
+      <h2>${t('read.title')}</h2>
+      <p>${t('read.intro')}</p>
     </div>
     <div class="toolbar">
-      <span class="level-badge">Level <b id="sr-level"></b>/10</span>
+      <span class="level-badge">${t('read.level')} <b id="sr-level"></b>/10</span>
       <span class="status-text" id="sr-key"></span>
-      <label>Clef
+      <label>${t('read.clef')}
         <select id="sr-clef">
-          <option value="treble" selected>Treble</option>
-          <option value="bass">Bass</option>
+          <option value="treble" selected>${t('read.treble')}</option>
+          <option value="bass">${t('read.bass')}</option>
         </select>
       </label>
-      <button id="sr-new" class="btn primary">New exercise</button>
+      <button id="sr-new" class="btn primary">${t('read.new')}</button>
       <span id="sr-live" class="status-text"></span>
     </div>
     <div id="sr-score" class="score-paper"></div>
@@ -45,6 +43,12 @@ export function mountSightread(root: HTMLElement): () => void {
   let engine: PlayThrough | null = null;
   let misses = 0;
 
+  const translateFlags = (flags: Map<number, string>): Map<number, string> => {
+    const out = new Map<number, string>();
+    for (const [i, f] of flags) out.set(i, t(`flag.${f}`));
+    return out;
+  };
+
   function startExercise() {
     engine?.dispose();
     misses = 0;
@@ -52,9 +56,9 @@ export function mountSightread(root: HTMLElement): () => void {
     const level = progress().sightread.level;
     exercise = generateExercise(level, clefEl.value as 'treble' | 'bass');
     levelEl.textContent = String(level);
-    keyEl.textContent = `Key: ${exercise.key} major`;
+    keyEl.textContent = t('read.key', { key: keyName(exercise.key) });
     const stream = mainStream(exercise.score);
-    liveEl.textContent = `Note 1/${stream.length}`;
+    liveEl.textContent = t('read.noteCount', { n: 1, total: stream.length });
     let lastStatuses = new Map<number, NoteStatus>();
 
     const rerender = (statuses: Map<number, NoteStatus>, flags?: Map<number, string>) => {
@@ -70,13 +74,15 @@ export function mountSightread(root: HTMLElement): () => void {
       onUpdate: (statuses, pos) => {
         rerender(statuses);
         if (pos < stream.length) {
-          liveEl.textContent = `Note ${pos + 1}/${stream.length}${misses ? ` · ${misses} miss${misses === 1 ? '' : 'es'}` : ''}`;
+          liveEl.textContent = misses
+            ? t('read.noteCountMiss', { n: pos + 1, total: stream.length, m: misses, missWord: misses === 1 ? t('read.miss') : t('read.misses') })
+            : t('read.noteCount', { n: pos + 1, total: stream.length });
         }
       },
       onWrongNote: () => {
         misses++;
       },
-      onComplete: (res) => finish(res, stream.length, () => rerender(lastStatuses, res.rhythmFlags)),
+      onComplete: (res) => finish(res, stream.length, () => rerender(lastStatuses, translateFlags(res.rhythmFlags))),
     });
     engine.start();
   }
@@ -87,12 +93,12 @@ export function mountSightread(root: HTMLElement): () => void {
     let change = '';
     if (res.accuracy >= 0.92 && oldLevel < 10) {
       p.sightread.level = oldLevel + 1;
-      change = `⬆ Level up! Now level ${p.sightread.level}.`;
+      change = t('read.levelUp', { level: p.sightread.level });
     } else if (res.accuracy < 0.75 && oldLevel > 1) {
       p.sightread.level = oldLevel - 1;
-      change = `⬇ Easing off — level ${p.sightread.level}.`;
+      change = t('read.levelDown', { level: p.sightread.level });
     } else {
-      change = 'Holding level — right in the challenge zone.';
+      change = t('read.levelHold');
     }
     save();
     recordSightread({
@@ -108,16 +114,16 @@ export function mountSightread(root: HTMLElement): () => void {
     countNotes(totalNotes);
 
     const pct = Math.round(res.accuracy * 100);
-    liveEl.textContent = 'Done!';
+    liveEl.textContent = t('read.done');
     resultsEl.classList.remove('hidden');
     resultsEl.innerHTML = `
       <div class="result-tiles">
-        <div class="tile"><div class="tile-num ${pct >= 85 ? 'good' : pct >= 70 ? 'mid' : 'bad'}">${pct}%</div><div class="tile-label">pitch accuracy (${res.correctFirstTry}/${res.total} first try)</div></div>
-        <div class="tile"><div class="tile-num">${res.notesPerMin}</div><div class="tile-label">notes per minute</div></div>
-        <div class="tile"><div class="tile-num ${res.rhythmIssues === 0 ? 'good' : 'mid'}">${res.rhythmIssues}</div><div class="tile-label">rhythm flags (rushed/held, vs your own pulse)</div></div>
+        <div class="tile"><div class="tile-num ${pct >= 85 ? 'good' : pct >= 70 ? 'mid' : 'bad'}">${pct}%</div><div class="tile-label">${t('read.accLabel', { correct: res.correctFirstTry, total: res.total })}</div></div>
+        <div class="tile"><div class="tile-num">${res.notesPerMin}</div><div class="tile-label">${t('read.npmLabel')}</div></div>
+        <div class="tile"><div class="tile-num ${res.rhythmIssues === 0 ? 'good' : 'mid'}">${res.rhythmIssues}</div><div class="tile-label">${t('read.rhythmLabel')}</div></div>
       </div>
       <p class="result-note">${change}</p>
-      <button class="btn primary" id="sr-next">Next exercise →</button>
+      <button class="btn primary" id="sr-next">${t('read.next')}</button>
     `;
     (resultsEl.querySelector('#sr-next') as HTMLButtonElement).addEventListener('click', startExercise);
     // re-render with rhythm annotations under the offending notes
