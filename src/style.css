@@ -470,3 +470,17 @@ footer {
 .daily-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
 
 .daily-diff-note { font-size: 12px; color: var(--accent); }
+
+/* ---------- Mirror bookmarks ---------- */
+.mir-bookmarks { margin-top: 18px; }
+.mir-bm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.mir-bm-head h3 { margin: 0; }
+.mir-bm-io { display: flex; gap: 8px; }
+.mir-bm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mir-bm-empty { padding: 8px 2px; font-size: 14px; }
+.mir-bm-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.mir-bm-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mir-bm-name { font-weight: 600; color: var(--ink); }
+.mir-bm-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.mir-bm-actions .btn { padding: 4px 10px; font-size: 13px; }
