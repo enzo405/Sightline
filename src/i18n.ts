@@ -214,6 +214,7 @@ const EN: Dict = {
   'settings.off': 'Off',
 
   // Progress
+  'progress.title': 'Your skill map',
   'progress.intro': 'Short daily sessions, visible progress. Everything below is measured from your actual playing in the other three rooms — nothing is self-reported.',
   'progress.level': 'sight-reading level',
   'progress.accuracy': 'accuracy, last 10 exercises',
