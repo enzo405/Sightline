@@ -109,6 +109,19 @@ interface DrawnNote {
 }
 
 export function renderScore(container: HTMLElement, score: Score, opts: RenderOptions = {}): void {
+  // Re-rendering wipes the container and reads its layout, which momentarily
+  // collapses its height. For a tall/wide score that lets the browser clamp the
+  // scroll position of the container and its scrollable ancestors (e.g. the
+  // scrolling <main>) to the smaller size — so the view jumps to the top/left on
+  // every played note. Snapshot the scroll offsets now and restore them after
+  // the rebuild, when the full height is back.
+  const scrollSnapshot: { el: Element; left: number; top: number }[] = [];
+  for (let node: Element | null = container; node; node = node.parentElement) {
+    if (node.scrollLeft || node.scrollTop) {
+      scrollSnapshot.push({ el: node, left: node.scrollLeft, top: node.scrollTop });
+    }
+  }
+
   container.innerHTML = '';
   const keyInfo = KEYS[score.key] ?? KEYS.C;
   const mpl = opts.measuresPerLine ?? 4;
@@ -255,5 +268,11 @@ export function renderScore(container: HTMLElement, score: Score, opts: RenderOp
       new StaveTie({ first_note: a.vex, first_indices: [0], last_indices: [0] }).setContext(ctx).draw();
       new StaveTie({ last_note: b.vex, first_indices: [0], last_indices: [0] }).setContext(ctx).draw();
     }
+  }
+
+  // Full height is back — put the scroll offsets where they were.
+  for (const s of scrollSnapshot) {
+    s.el.scrollLeft = s.left;
+    s.el.scrollTop = s.top;
   }
 }
