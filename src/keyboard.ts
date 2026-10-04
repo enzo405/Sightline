@@ -20,6 +20,35 @@ function isBlack(midi: number): boolean {
   return [1, 3, 6, 8, 10].includes(midi % 12);
 }
 
+const reduceMotion =
+  typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// A quick burst of glitter above a key when its note is played. Particles are
+// fixed-position on <body> so they escape the keyboard's scroll clipping, and
+// they remove themselves when their animation ends.
+function spawnSparkle(key: HTMLElement): void {
+  if (reduceMotion) return;
+  const r = key.getBoundingClientRect();
+  if (r.width === 0) return; // not laid out / scrolled out of view
+  const cx = r.left + r.width / 2;
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement('span');
+    s.className = 'sparkle';
+    const size = 3 + Math.random() * 4;
+    s.style.left = `${cx + (Math.random() - 0.5) * r.width * 1.4}px`;
+    s.style.top = `${r.top}px`;
+    s.style.width = `${size}px`;
+    s.style.height = `${size}px`;
+    s.style.setProperty('--rise', `${22 + Math.random() * 28}px`);
+    s.style.setProperty('--drift', `${(Math.random() - 0.5) * 18}px`);
+    s.style.animationDelay = `${Math.random() * 70}ms`;
+    document.body.appendChild(s);
+    const kill = () => s.remove();
+    s.addEventListener('animationend', kill);
+    setTimeout(kill, 1200); // fallback if animationend never fires (backgrounded tab)
+  }
+}
+
 export interface Keyboard {
   el: HTMLElement;
   setHighlights(map: Map<number, string>): void;
@@ -99,7 +128,12 @@ export function createKeyboard(): Keyboard {
   window.addEventListener('keyup', onKeyUp);
 
   // --- mirror all bus input as pressed keys ---
-  const offOn = input.onNoteOn((e) => keyEls.get(e.midi)?.classList.add('pressed'));
+  const offOn = input.onNoteOn((e) => {
+    const k = keyEls.get(e.midi);
+    if (!k) return;
+    k.classList.add('pressed');
+    spawnSparkle(k);
+  });
   const offOff = input.onNoteOff((e) => keyEls.get(e.midi)?.classList.remove('pressed'));
 
   let highlighted: number[] = [];

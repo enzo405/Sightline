@@ -324,3 +324,21 @@ footer {
   position: absolute; bottom: 4px; left: 0; right: 0; text-align: center;
   font-size: 9px; color: #6b675e; pointer-events: none;
 }
+
+/* Glitter burst above a key when its note is played (keyboard.ts). */
+.sparkle {
+  position: fixed; z-index: 60; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #cfe3fb 45%, rgba(57,135,229,0) 72%);
+  box-shadow: 0 0 6px rgba(174,207,245,0.9);
+  transform: translate(-50%, -50%);
+  animation: sparkle-rise 700ms ease-out forwards;
+  will-change: transform, opacity;
+}
+@keyframes sparkle-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--drift)), calc(-50% - var(--rise))) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sparkle { display: none; }
+}
