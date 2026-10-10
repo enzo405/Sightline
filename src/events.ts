@@ -15,6 +15,10 @@ const noteOnHandlers = new Set<NoteHandler>();
 const noteOffHandlers = new Set<NoteHandler>();
 const sustainHandlers = new Set<SustainHandler>();
 
+// Current sustain-pedal state, so a feature mounted while the pedal is already
+// held can read it immediately instead of waiting for the next CC64 change.
+let sustainState = false;
+
 export const input = {
   onNoteOn(fn: NoteHandler): () => void {
     noteOnHandlers.add(fn);
@@ -28,6 +32,10 @@ export const input = {
     sustainHandlers.add(fn);
     return () => sustainHandlers.delete(fn);
   },
+  /** Is the sustain pedal currently down? */
+  sustainDown(): boolean {
+    return sustainState;
+  },
   noteOn(midi: number, velocity = 90): void {
     const e = { midi, velocity, time: performance.now() };
     for (const fn of [...noteOnHandlers]) fn(e);
@@ -37,6 +45,7 @@ export const input = {
     for (const fn of [...noteOffHandlers]) fn(e);
   },
   sustain(down: boolean): void {
+    sustainState = down;
     for (const fn of [...sustainHandlers]) fn(down);
   },
 };

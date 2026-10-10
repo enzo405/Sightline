@@ -49,6 +49,10 @@ export function mountFreePlay(root: HTMLElement): () => void {
     </div>
   `;
 
+  // Let the note field use the whole view — drop the shell's padding/max-width.
+  const appEl = document.getElementById('app');
+  appEl?.classList.add('immersive');
+
   const stage = root.querySelector('.play-stage') as HTMLElement;
   const canvas = root.querySelector('#play-canvas') as HTMLCanvasElement;
   const hint = root.querySelector('#play-hint') as HTMLElement;
@@ -74,7 +78,9 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const bars: Bar[] = [];
   const labels: Label[] = [];
   const active = new Map<number, Bar>(); // midi -> its live (key-held) bar
-  let pedalDown = false;
+  // Reflect the pedal's real state on entry: if it's already held down when the
+  // page opens, released notes should be sustained right away.
+  let pedalDown = input.sustainDown();
 
   const laneW = () => W / (SPAN + 1);
   const xFor = (midi: number) => (midi - LOW) * laneW();
@@ -170,6 +176,7 @@ export function mountFreePlay(root: HTMLElement): () => void {
   return () => {
     cancelAnimationFrame(raf);
     ro.disconnect();
+    appEl?.classList.remove('immersive');
     offOn();
     offOff();
     offSustain();

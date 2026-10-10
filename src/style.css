@@ -1349,18 +1349,17 @@ footer {
 .daily-rest-msg { font-size: 14px; color: var(--accent); margin: 0; }
 
 /* ---------- Free Play ---------- */
+/* Free Play fills the whole view: the shell drops its padding/max-width so the
+   note field spans the full width and height available between header + keyboard. */
+#app.immersive main {
+  padding: 0;
+  max-width: none;
+  overflow: hidden;
+}
 .play-stage {
   position: relative;
-  /* full-bleed: break out of main's max-width + padding so the note field
-     spans the whole app width, edge to edge */
-  width: 100vw;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-  margin-top: -18px;
-  margin-bottom: -26px;
-  height: calc(100% + 44px);
+  height: 100%;
+  width: 100%;
   min-height: 320px;
   overflow: hidden;
   /* transparent so the app's real background (var(--bg) + the body's blue
