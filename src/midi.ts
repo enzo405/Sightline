@@ -66,7 +66,9 @@ export async function initMidi(): Promise<void> {
           input.noteOff(data[1]);
         } else if (cmd === 0xb0 && data[1] === 64) {
           // Sustain pedal (CC64): >=64 is down.
-          setSustain(data[2] >= 64);
+          const down = data[2] >= 64;
+          setSustain(down);
+          input.sustain(down);
         }
       };
     });
