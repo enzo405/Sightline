@@ -57,6 +57,7 @@ const EN: Dict = {
   'lang.toggleTitle': 'Passer en français',
 
   'tab.mirror': 'Mirror',
+  'tab.play': 'Free Play',
   'tab.read': 'Sight-Reading',
   'tab.fading': 'Fading Score',
   'tab.improv': 'Improv Lab',
@@ -114,6 +115,12 @@ const EN: Dict = {
   'mirror.import': '⤒ Import',
   'mirror.imported': 'Imported {added} piece(s); {skipped} skipped.',
   'mirror.importError': 'Could not read that bookmarks file.',
+
+  // Free Play
+  'play.title': 'Free Play',
+  'play.intro': 'Just play. Every note blooms into light — from your MIDI piano, the keys at the bottom, or your computer keyboard. No targets, no scoring.',
+  'play.hint': 'Play a note to begin…',
+  'tut.play': 'Play from your MIDI piano, the on-screen keys, or the A–; computer-keyboard row.|Each note bursts into a ripple, particles and its name — pitch sets the colour, how hard you play sets the size.|There is nothing to pass here: just enjoy the sound and the light.',
 
   // Sight-reading
   'read.title': 'Adaptive Sight-Reading',
@@ -381,6 +388,7 @@ const FR: Dict = {
   'lang.toggleTitle': 'Switch to English',
 
   'tab.mirror': 'Miroir',
+  'tab.play': 'Jeu libre',
   'tab.read': 'Déchiffrage',
   'tab.fading': 'Partition',
   'tab.improv': 'Labo d’impro',
@@ -438,6 +446,12 @@ const FR: Dict = {
   'mirror.import': '⤒ Importer',
   'mirror.imported': '{added} morceau(x) importé(s) ; {skipped} ignoré(s).',
   'mirror.importError': 'Impossible de lire ce fichier de favoris.',
+
+  // Jeu libre
+  'play.title': 'Jeu libre',
+  'play.intro': 'Jouez, tout simplement. Chaque note éclot en lumière — depuis votre piano MIDI, le clavier en bas, ou le clavier de l’ordinateur. Aucun objectif, aucun score.',
+  'play.hint': 'Jouez une note pour commencer…',
+  'tut.play': 'Jouez depuis votre piano MIDI, le clavier à l’écran, ou la rangée A–; du clavier d’ordinateur.|Chaque note explose en onde, particules et son nom — la hauteur donne la couleur, la force donne la taille.|Rien à réussir ici : profitez simplement du son et de la lumière.',
 
   // Déchiffrage
   'read.title': 'Déchiffrage adaptatif',

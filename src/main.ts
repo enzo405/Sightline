@@ -4,6 +4,7 @@ import './style.css';
 import { input } from './events';
 import { mountDaily } from './daily';
 import { mountFading } from './fading';
+import { mountFreePlay } from './freeplay';
 import { mountEar } from './eartraining';
 import { lang, onLangChange, setLang, t } from './i18n';
 import { mountImprov } from './improv';
@@ -48,6 +49,7 @@ onSettingsChange(applyAudioSettings);
 
 const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => void }[] = [
   { id: 'daily', labelKey: 'tab.daily', mount: mountDaily },
+  { id: 'play', labelKey: 'tab.play', mount: mountFreePlay },
   { id: 'mirror', labelKey: 'tab.mirror', mount: mountMirror },
   { id: 'read', labelKey: 'tab.read', mount: mountSightread },
   { id: 'fading', labelKey: 'tab.fading', mount: mountFading },
