@@ -118,9 +118,9 @@ const EN: Dict = {
 
   // Free Play
   'play.title': 'Free Play',
-  'play.intro': 'Just play. Every note blooms into light — from your MIDI piano, the keys at the bottom, or your computer keyboard. No targets, no scoring.',
+  'play.intro': 'Just play. Every note rises from the bottom as a glowing bar — from your MIDI piano, the keys at the bottom, or your computer keyboard. No targets, no scoring.',
   'play.hint': 'Play a note to begin…',
-  'tut.play': 'Play from your MIDI piano, the on-screen keys, or the A–; computer-keyboard row.|Each note bursts into a ripple, particles and its name — pitch sets the colour, how hard you play sets the size.|There is nothing to pass here: just enjoy the sound and the light.',
+  'tut.play': 'Play from your MIDI piano, the on-screen keys, or the A–; computer-keyboard row.|Each note rises from the baseline as a coloured bar that grows while you hold it, then floats up and away — pitch sets the colour, how hard you play sets the brightness.|There is nothing to pass here: just enjoy the sound and the light.',
 
   // Sight-reading
   'read.title': 'Adaptive Sight-Reading',
@@ -449,9 +449,9 @@ const FR: Dict = {
 
   // Jeu libre
   'play.title': 'Jeu libre',
-  'play.intro': 'Jouez, tout simplement. Chaque note éclot en lumière — depuis votre piano MIDI, le clavier en bas, ou le clavier de l’ordinateur. Aucun objectif, aucun score.',
+  'play.intro': 'Jouez, tout simplement. Chaque note monte depuis le bas en une barre lumineuse — depuis votre piano MIDI, le clavier en bas, ou le clavier de l’ordinateur. Aucun objectif, aucun score.',
   'play.hint': 'Jouez une note pour commencer…',
-  'tut.play': 'Jouez depuis votre piano MIDI, le clavier à l’écran, ou la rangée A–; du clavier d’ordinateur.|Chaque note explose en onde, particules et son nom — la hauteur donne la couleur, la force donne la taille.|Rien à réussir ici : profitez simplement du son et de la lumière.',
+  'tut.play': 'Jouez depuis votre piano MIDI, le clavier à l’écran, ou la rangée A–; du clavier d’ordinateur.|Chaque note s’élève depuis la ligne de base en une barre colorée qui s’allonge tant que vous la tenez, puis s’envole vers le haut — la hauteur donne la couleur, la force donne l’éclat.|Rien à réussir ici : profitez simplement du son et de la lumière.',
 
   // Déchiffrage
   'read.title': 'Déchiffrage adaptatif',

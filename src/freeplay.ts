@@ -1,8 +1,9 @@
-// Free Play — no scoring, no targets. Every note you play (MIDI, the on-screen
-// keyboard, or the computer keys) blooms into light: a ripple, a burst of
-// particles, a sustained column of colour and the note's name floating up.
-// Pure reaction. Sound is already produced by the input sources themselves, so
-// this page only listens to the shared note bus and paints.
+// Free Play — no scoring, no targets. A Synthesia-style visual: every note you
+// play (MIDI, the on-screen keyboard, or the computer keys) rises from a
+// baseline near the bottom as a glowing bar, growing taller while you hold it,
+// then detaching and floating up to the top once released. Pitch sets the lane
+// and hue; velocity sets the brightness. Sound is already produced by the input
+// sources themselves, so this page only listens to the shared note bus.
 
 import { input } from './events';
 import { noteName, t } from './i18n';
@@ -10,10 +11,31 @@ import { tutorialHTML } from './tutorial';
 
 const LOW = 21;   // A0
 const HIGH = 108; // C8
+const SPAN = HIGH - LOW;
+const RISE = 2.4; // px per 60fps-frame the bars travel upward
 
-interface Ripple { x: number; y: number; r: number; max: number; hue: number; life: number; }
-interface Particle { x: number; y: number; vx: number; vy: number; life: number; hue: number; size: number; }
+interface Bar {
+  midi: number;
+  x: number;
+  w: number;
+  hue: number;
+  alpha: number;   // brightness from velocity
+  headY: number;   // leading (top) edge — always rising
+  tailY: number;   // trailing (bottom) edge — pinned to baseline while held
+  held: boolean;
+}
 interface Label { x: number; y: number; life: number; text: string; hue: number; }
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
 
 export function mountFreePlay(root: HTMLElement): () => void {
   root.innerHTML = `
@@ -32,15 +54,16 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const canvas = root.querySelector('#play-canvas') as HTMLCanvasElement;
   const hint = root.querySelector('#play-hint') as HTMLElement;
   const ctx = canvas.getContext('2d')!;
-  const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let W = 0;
   let H = 0;
+  let baseline = 0;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   function resize() {
     const r = stage.getBoundingClientRect();
     W = r.width;
     H = r.height;
+    baseline = H - 56;
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -49,105 +72,107 @@ export function mountFreePlay(root: HTMLElement): () => void {
   ro.observe(stage);
   resize();
 
-  const ripples: Ripple[] = [];
-  const particles: Particle[] = [];
+  const bars: Bar[] = [];
   const labels: Label[] = [];
-  const active = new Map<number, { hue: number; x: number }>(); // currently held notes
+  const active = new Map<number, Bar>(); // midi -> its live (held) bar
 
-  const xFor = (midi: number) => ((midi - LOW) / (HIGH - LOW)) * W;
+  const laneW = () => W / (SPAN + 1);
+  const xFor = (midi: number) => (midi - LOW) * laneW();
   const hueFor = (midi: number) => (midi % 12) * 30;
 
   const offOn = input.onNoteOn((e) => {
     hint.classList.add('hidden');
-    const x = xFor(e.midi);
+    const lw = laneW();
+    const x = xFor(e.midi) + lw * 0.12;
     const hue = hueFor(e.midi);
-    const vel = Math.max(0.3, Math.min(1, e.velocity / 110));
-    const y = H * 0.62;
-    active.set(e.midi, { hue, x });
-    ripples.push({ x, y, r: 8, max: 60 + vel * 130, hue, life: 1 });
-    labels.push({ x, y: y - 36, life: 1, text: noteName(e.midi), hue });
-    const count = reduce ? 5 : Math.round(12 + vel * 20);
-    for (let i = 0; i < count; i++) {
-      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
-      const sp = 1 + Math.random() * 4 * vel;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - (1 + vel * 2),
-        life: 1,
-        hue: hue + (Math.random() - 0.5) * 36,
-        size: 2 + Math.random() * 3 * vel,
-      });
-    }
+    const alpha = Math.max(0.45, Math.min(1, e.velocity / 110));
+    // replace any still-held bar for this midi (retrigger)
+    const prev = active.get(e.midi);
+    if (prev) prev.held = false;
+    const bar: Bar = { midi: e.midi, x, w: lw * 0.76, hue, alpha, headY: baseline, tailY: baseline, held: true };
+    bars.push(bar);
+    active.set(e.midi, bar);
+    labels.push({ x: x + lw * 0.38, y: baseline + 22, life: 1, text: noteName(e.midi), hue });
   });
-  const offOff = input.onNoteOff((e) => active.delete(e.midi));
+  const offOff = input.onNoteOff((e) => {
+    const bar = active.get(e.midi);
+    if (bar) { bar.held = false; active.delete(e.midi); }
+  });
 
   let raf = 0;
   let last = performance.now();
   function frame(nowMs: number) {
     const dt = Math.min(2.5, (nowMs - last) / 16.67);
     last = nowMs;
+    const v = RISE * dt;
 
-    // translucent wash → motion trails without full clears
+    // translucent wash → soft motion trails
     ctx.globalCompositeOperation = 'source-over';
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, 'rgba(12, 14, 28, 0.26)');
-    g.addColorStop(1, 'rgba(4, 6, 16, 0.32)');
+    g.addColorStop(0, 'rgba(10, 12, 26, 0.32)');
+    g.addColorStop(1, 'rgba(4, 6, 16, 0.38)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.globalCompositeOperation = 'lighter';
-
-    // sustained columns under held notes
-    for (const a of active.values()) {
-      const grd = ctx.createLinearGradient(a.x, 0, a.x, H);
-      grd.addColorStop(0, `hsla(${a.hue}, 90%, 60%, 0)`);
-      grd.addColorStop(1, `hsla(${a.hue}, 90%, 60%, 0.12)`);
-      ctx.fillStyle = grd;
-      ctx.fillRect(a.x - 28, 0, 56, H);
-    }
-
-    // expanding rings + glow core
-    for (let i = ripples.length - 1; i >= 0; i--) {
-      const r = ripples[i];
-      r.r += (r.max - r.r) * 0.06 * dt;
-      r.life -= 0.016 * dt;
-      if (r.life <= 0) { ripples.splice(i, 1); continue; }
-      ctx.strokeStyle = `hsla(${r.hue}, 90%, 66%, ${r.life * 0.8})`;
-      ctx.lineWidth = 2 + (1 - r.life) * 3;
+    // faint octave guides (every C) + baseline
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.lineWidth = 1;
+    for (let m = LOW; m <= HIGH; m++) {
+      if (m % 12 !== 0) continue;
+      const gx = xFor(m) + laneW() * 0.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
       ctx.beginPath();
-      ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, baseline);
       ctx.stroke();
-      ctx.fillStyle = `hsla(${r.hue}, 95%, 72%, ${r.life * 0.5})`;
-      ctx.beginPath();
-      ctx.arc(r.x, r.y, Math.max(0, 12 * r.life), 0, Math.PI * 2);
-      ctx.fill();
     }
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, baseline);
+    ctx.lineTo(W, baseline);
+    ctx.stroke();
 
-    // rising particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.vy += 0.05 * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= 0.02 * dt;
-      if (p.life <= 0) { particles.splice(i, 1); continue; }
-      ctx.fillStyle = `hsla(${p.hue}, 90%, 66%, ${p.life})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    // rising bars
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = bars.length - 1; i >= 0; i--) {
+      const b = bars[i];
+      b.headY -= v;
+      b.tailY = b.held ? baseline : b.tailY - v;
+      const top = b.headY;
+      const h = b.tailY - top;
+      if (h <= 0 || b.tailY < -24) { bars.splice(i, 1); continue; }
+
+      // fade as the bar nears the top
+      const fade = Math.max(0, Math.min(1, b.tailY / (H * 0.5)));
+      const a = b.alpha * (b.held ? 1 : Math.max(0.25, fade));
+      const grd = ctx.createLinearGradient(0, top, 0, b.tailY);
+      grd.addColorStop(0, `hsla(${b.hue}, 95%, 72%, ${a})`);
+      grd.addColorStop(1, `hsla(${b.hue}, 90%, 55%, ${a * 0.85})`);
+      ctx.fillStyle = grd;
+      ctx.shadowColor = `hsla(${b.hue}, 95%, 65%, ${a})`;
+      ctx.shadowBlur = 16;
+      roundRectPath(ctx, b.x, top, b.w, h, Math.min(5, b.w / 2));
       ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // bright cap where the note meets the baseline while held
+      if (b.held) {
+        ctx.fillStyle = `hsla(${b.hue}, 100%, 85%, ${a})`;
+        roundRectPath(ctx, b.x, baseline - 4, b.w, 4, 2);
+        ctx.fill();
+      }
     }
 
     // floating note names
     ctx.globalCompositeOperation = 'source-over';
     ctx.textAlign = 'center';
-    ctx.font = '600 22px system-ui, -apple-system, sans-serif';
+    ctx.font = '600 15px system-ui, -apple-system, sans-serif';
     for (let i = labels.length - 1; i >= 0; i--) {
       const l = labels[i];
-      l.y -= 0.5 * dt;
-      l.life -= 0.012 * dt;
+      l.life -= 0.02 * dt;
       if (l.life <= 0) { labels.splice(i, 1); continue; }
-      ctx.fillStyle = `hsla(${l.hue}, 90%, 74%, ${l.life})`;
+      ctx.fillStyle = `hsla(${l.hue}, 90%, 78%, ${l.life})`;
       ctx.fillText(l.text, l.x, l.y);
     }
 
