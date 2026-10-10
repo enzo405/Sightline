@@ -117,30 +117,9 @@ export function mountFreePlay(root: HTMLElement): () => void {
     last = nowMs;
     const v = RISE * dt;
 
-    // fade previous paint toward transparent (not a solid colour), so the real
-    // app background — body gradient included — shows through and blends in.
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, 0.22 * dt)})`;
-    ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'source-over';
-
-    // faint octave guides (every C) + baseline
-    ctx.lineWidth = 1;
-    for (let m = LOW; m <= HIGH; m++) {
-      if (m % 12 !== 0) continue;
-      const gx = xFor(m) + laneW() * 0.5;
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-      ctx.beginPath();
-      ctx.moveTo(gx, 0);
-      ctx.lineTo(gx, baseline);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = pedalDown ? 'rgba(122,162,247,0.5)' : 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = pedalDown ? 3 : 2;
-    ctx.beginPath();
-    ctx.moveTo(0, baseline);
-    ctx.lineTo(W, baseline);
-    ctx.stroke();
+    // clear fully each frame → crisp bars with no trailing, and no white
+    // guides or baseline; the real app background shows straight through.
+    ctx.clearRect(0, 0, W, H);
 
     // rising bars
     ctx.globalCompositeOperation = 'lighter';

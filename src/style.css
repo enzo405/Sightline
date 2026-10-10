@@ -1351,9 +1351,17 @@ footer {
 /* ---------- Free Play ---------- */
 .play-stage {
   position: relative;
-  height: 100%;
+  /* full-bleed: break out of main's max-width + padding so the note field
+     spans the whole app width, edge to edge */
+  width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  margin-top: -18px;
+  margin-bottom: -26px;
+  height: calc(100% + 44px);
   min-height: 320px;
-  border-radius: var(--radius);
   overflow: hidden;
   /* transparent so the app's real background (var(--bg) + the body's blue
      radial gradients) shows through and the note field blends right in */
