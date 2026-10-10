@@ -117,10 +117,12 @@ export function mountFreePlay(root: HTMLElement): () => void {
     last = nowMs;
     const v = RISE * dt;
 
-    // translucent wash in the app background colour → soft trails that fade to bg
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(13, 13, 13, 0.34)';
+    // fade previous paint toward transparent (not a solid colour), so the real
+    // app background — body gradient included — shows through and blends in.
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, 0.22 * dt)})`;
     ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
 
     // faint octave guides (every C) + baseline
     ctx.lineWidth = 1;
