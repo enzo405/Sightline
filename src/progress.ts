@@ -146,6 +146,21 @@ export function dailyHighestDone(): number {
   return keys.length ? Math.max(...keys) : 0;
 }
 
+/** ISO date of the most recently completed journey day (null if none). */
+export function dailyLastDate(): string | null {
+  const done = progress().daily.done;
+  const keys = Object.keys(done).map(Number);
+  if (!keys.length) return null;
+  return done[Math.max(...keys)] ?? null;
+}
+
+/** Wipe only the 30-day journey progress (used when the streak is broken). */
+export function resetDaily(): void {
+  const p = progress();
+  p.daily = { done: {} };
+  save();
+}
+
 export function streakDays(): number {
   const days = progress().totals.days;
   let streak = 0;
