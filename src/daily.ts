@@ -27,12 +27,6 @@ function daysSince(iso: string): number {
   return Math.round((b - a) / 86400000);
 }
 
-/** Did the latest completion happen today? (today's journey slot is used up) */
-function doneToday(): boolean {
-  const last = dailyLastDate();
-  return last !== null && daysSince(last) === 0;
-}
-
 /** True when the player let too many days pass mid-journey — the series is lost. */
 function streakBroken(): boolean {
   const last = dailyLastDate();
@@ -95,14 +89,12 @@ export function mountDaily(root: HTMLElement): () => void {
     ringEl.style.setProperty('--pct', String(pct));
     ringNumEl.innerHTML = `${done}<small>/${DAILY_TOTAL}</small>`;
     const nd = nextOpenDay();
-    const resting = doneToday();
     const diffName = t('settings.diff' + settings().difficulty.charAt(0).toUpperCase() + settings().difficulty.slice(1));
 
     let status: string;
     if (seriesLost) status = t('daily.streakLost');
     else if (done >= DAILY_TOTAL) status = t('daily.allDone');
     else if (done === 0) status = t('daily.overviewSub', { done, total: DAILY_TOTAL });
-    else if (resting) status = t('daily.restToday');
     else status = t('daily.onTrack', { day: nd });
 
     const parts = [status];
@@ -112,34 +104,25 @@ export function mountDaily(root: HTMLElement): () => void {
 
     if (seriesLost) subEl.classList.add('daily-lost'); else subEl.classList.remove('daily-lost');
 
-    if (resting && done < DAILY_TOTAL) {
-      continueBtn.textContent = t('daily.comeBackTomorrow');
-      continueBtn.disabled = true;
-    } else {
-      continueBtn.disabled = false;
-      continueBtn.textContent = done === 0
-        ? t('daily.start')
-        : done >= DAILY_TOTAL ? t('daily.review') : t('daily.continue', { day: nd });
-    }
+    continueBtn.disabled = false;
+    continueBtn.textContent = done === 0
+      ? t('daily.start')
+      : done >= DAILY_TOTAL ? t('daily.review') : t('daily.continue', { day: nd });
   }
 
   function renderGrid() {
     const doneMap = progress().daily.done;
     const highest = dailyHighestDone();
-    const restFrontier = doneToday() ? highest + 1 : 0; // next day is resting until tomorrow
     let html = '';
     for (let day = 1; day <= DAILY_TOTAL; day++) {
       const done = !!doneMap[day];
-      const resting = !done && day === restFrontier;
-      const unlocked = day <= highest + 1 && !resting;
-      const current = !done && !resting && day === highest + 1;
+      const unlocked = day <= highest + 1;
+      const current = !done && day === highest + 1;
       const cls = ['cal-day'];
       if (done) cls.push('done');
       if (current) cls.push('current');
-      if (resting) cls.push('rest');
-      if (!unlocked && !resting) cls.push('locked');
+      if (!unlocked) cls.push('locked');
       const badge = done ? '<span class="cal-badge">✓</span>'
-        : resting ? '<span class="cal-badge">🌙</span>'
         : !unlocked ? '<span class="cal-badge">🔒</span>' : '';
       const disabled = unlocked ? '' : ' disabled';
       html += `<button class="${cls.join(' ')}" data-day="${day}"${disabled}>
@@ -267,8 +250,6 @@ export function mountDaily(root: HTMLElement): () => void {
   function completeDay() {
     if (!def) return;
     const day = def.day;
-    const wasNew = !progress().daily.done[day];
-    const prevHighest = dailyHighestDone();
     markDailyDone(day);
     engine?.dispose();
     engine = null;
@@ -278,13 +259,9 @@ export function mountDaily(root: HTMLElement): () => void {
     const controlsEl = detailEl.querySelector('#daily-controls') as HTMLElement;
     liveEl.textContent = '';
 
-    const advanced = wasNew && day === prevHighest + 1; // finished the frontier → rest until tomorrow
-    const canReviewNext = day < DAILY_TOTAL && day + 1 <= dailyHighestDone();
-    let action: string;
-    if (advanced && day < DAILY_TOTAL) action = `<p class="muted daily-rest-msg">🌙 ${t('daily.restToday')}</p>`;
-    else if (canReviewNext) action = `<button class="btn primary" id="daily-next">${t('daily.nextDay', { day: day + 1 })}</button>`;
-    else if (day >= DAILY_TOTAL) action = `<p class="muted">${t('daily.allDone')}</p>`;
-    else action = '';
+    const action = day < DAILY_TOTAL
+      ? `<button class="btn primary" id="daily-next">${t('daily.nextDay', { day: day + 1 })}</button>`
+      : `<p class="muted">${t('daily.allDone')}</p>`;
 
     controlsEl.innerHTML = `
       <div class="daily-done-banner">
