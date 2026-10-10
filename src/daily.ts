@@ -27,6 +27,13 @@ function daysSince(iso: string): number {
   return Math.round((b - a) / 86400000);
 }
 
+/** Did a brand-new journey day already count today? Only one real day may be
+ *  earned per calendar day — you can still *attempt* the next day as practice. */
+function advancedToday(): boolean {
+  const last = dailyLastDate();
+  return last !== null && daysSince(last) === 0;
+}
+
 /** True when the player let too many days pass mid-journey — the series is lost. */
 function streakBroken(): boolean {
   const last = dailyLastDate();
@@ -95,6 +102,7 @@ export function mountDaily(root: HTMLElement): () => void {
     if (seriesLost) status = t('daily.streakLost');
     else if (done >= DAILY_TOTAL) status = t('daily.allDone');
     else if (done === 0) status = t('daily.overviewSub', { done, total: DAILY_TOTAL });
+    else if (advancedToday()) status = t('daily.restToday');
     else status = t('daily.onTrack', { day: nd });
 
     const parts = [status];
@@ -250,7 +258,13 @@ export function mountDaily(root: HTMLElement): () => void {
   function completeDay() {
     if (!def) return;
     const day = def.day;
-    markDailyDone(day);
+    const prevHighest = dailyHighestDone();
+    const isFrontier = day === prevHighest + 1;
+    // The frontier day only counts when no new day has been earned today yet —
+    // you can attempt it early, but it won't advance the journey until its day.
+    const counts = isFrontier && !advancedToday();
+
+    if (counts) markDailyDone(day);
     engine?.dispose();
     engine = null;
     renderOverview();
@@ -259,14 +273,33 @@ export function mountDaily(root: HTMLElement): () => void {
     const controlsEl = detailEl.querySelector('#daily-controls') as HTMLElement;
     liveEl.textContent = '';
 
-    const action = day < DAILY_TOTAL
-      ? `<button class="btn primary" id="daily-next">${t('daily.nextDay', { day: day + 1 })}</button>`
-      : `<p class="muted">${t('daily.allDone')}</p>`;
+    let emoji: string;
+    let banner: string;
+    let action: string;
+    if (counts) {
+      emoji = '🎉';
+      banner = t('daily.dayDone', { day });
+      action = day < DAILY_TOTAL
+        ? `<button class="btn primary" id="daily-next">${t('daily.nextDay', { day: day + 1 })}</button>`
+        : `<p class="muted">${t('daily.allDone')}</p>`;
+    } else if (isFrontier) {
+      // attempted the next day ahead of its calendar day — practice only
+      emoji = '🌙';
+      banner = t('daily.earlyNoCount', { day });
+      action = `<p class="muted daily-rest-msg">${t('daily.comeBackTomorrow')}</p>`;
+    } else {
+      // replayed an already-completed day (review)
+      emoji = '🎉';
+      banner = t('daily.dayDone', { day });
+      action = day + 1 <= dailyHighestDone()
+        ? `<button class="btn primary" id="daily-next">${t('daily.nextDay', { day: day + 1 })}</button>`
+        : '';
+    }
 
     controlsEl.innerHTML = `
       <div class="daily-done-banner">
-        <div class="daily-done-emoji">🎉</div>
-        <p>${t('daily.dayDone', { day })}</p>
+        <div class="daily-done-emoji">${emoji}</div>
+        <p>${banner}</p>
         <div class="daily-done-actions">
           ${action}
           <button class="btn" id="daily-calendar">${t('daily.toCalendar')}</button>

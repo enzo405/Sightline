@@ -273,6 +273,7 @@ const EN: Dict = {
   'daily.taskRetry': '{pct}% — you need ≥{goal}% to clear this one. Give it another go.',
   'daily.retry': 'Try again →',
   'daily.dayDone': 'Day {day} complete — nicely done!',
+  'daily.earlyNoCount': 'Day {day} isn’t due yet — this run is practice and won’t count.',
   'daily.nextDay': 'Start day {day} →',
   'daily.toCalendar': 'Back to calendar',
 
@@ -604,6 +605,7 @@ const FR: Dict = {
   'daily.taskRetry': '{pct} % — il faut ≥{goal} % pour valider celle-ci. Réessayez.',
   'daily.retry': 'Réessayer →',
   'daily.dayDone': 'Jour {day} terminé — bien joué !',
+  'daily.earlyNoCount': 'Le jour {day} n’est pas encore dû — cet essai est un entraînement et ne compte pas.',
   'daily.nextDay': 'Commencer le jour {day} →',
   'daily.toCalendar': 'Retour au calendrier',
 
