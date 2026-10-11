@@ -15,6 +15,9 @@ type StatusListener = (s: MidiStatus) => void;
 const listeners = new Set<StatusListener>();
 let current: MidiStatus = { state: 'unsupported' };
 let initializing = false;
+// Cache the granted access: requesting a second MIDIAccess leaves the first one
+// still listening to the same hardware, so every note would fire twice. Reuse it.
+let access: MIDIAccess | null = null;
 
 /** True when the browser exposes the Web MIDI API at all. */
 export function midiSupported(): boolean {
@@ -32,14 +35,48 @@ function setStatus(s: MidiStatus) {
   for (const fn of listeners) fn(s);
 }
 
+/** (Re)bind every input port on the given access to the note bus + synth.
+ *  Assigning onmidimessage is idempotent, so calling this again just refreshes
+ *  the device list without stacking handlers. */
+function attach(acc: MIDIAccess) {
+  const devices: string[] = [];
+  acc.inputs.forEach((port) => {
+    devices.push(port.name ?? 'MIDI device');
+    port.onmidimessage = (msg) => {
+      const data = msg.data;
+      if (!data || data.length < 2) return;
+      const cmd = data[0] & 0xf0;
+      if (cmd === 0x90 && data[2] > 0) {
+        unlockAudio();
+        pianoOn(data[1], data[2]);
+        input.noteOn(data[1], data[2]);
+      } else if (cmd === 0x80 || (cmd === 0x90 && data[2] === 0)) {
+        pianoOff(data[1]);
+        input.noteOff(data[1]);
+      } else if (cmd === 0xb0 && data[1] === 64) {
+        // Sustain pedal (CC64): >=64 is down.
+        const down = data[2] >= 64;
+        setSustain(down);
+        input.sustain(down);
+      }
+    };
+  });
+  setStatus({ state: 'ready', devices });
+}
+
 export async function initMidi(): Promise<void> {
   if (!navigator.requestMIDIAccess) {
     setStatus({ state: 'unsupported' });
     return;
   }
+  // Already granted — just refresh the port bindings/device list, never request
+  // a second access object (that's what caused notes to sound twice).
+  if (access) {
+    attach(access);
+    return;
+  }
   if (initializing) return;
   initializing = true;
-  let access: MIDIAccess;
   try {
     // sysex:false keeps the Firefox permission prompt to the minimal scope.
     access = await navigator.requestMIDIAccess({ sysex: false });
@@ -49,33 +86,7 @@ export async function initMidi(): Promise<void> {
     return;
   }
 
-  const attach = () => {
-    const devices: string[] = [];
-    access.inputs.forEach((port) => {
-      devices.push(port.name ?? 'MIDI device');
-      port.onmidimessage = (msg) => {
-        const data = msg.data;
-        if (!data || data.length < 2) return;
-        const cmd = data[0] & 0xf0;
-        if (cmd === 0x90 && data[2] > 0) {
-          unlockAudio();
-          pianoOn(data[1], data[2]);
-          input.noteOn(data[1], data[2]);
-        } else if (cmd === 0x80 || (cmd === 0x90 && data[2] === 0)) {
-          pianoOff(data[1]);
-          input.noteOff(data[1]);
-        } else if (cmd === 0xb0 && data[1] === 64) {
-          // Sustain pedal (CC64): >=64 is down.
-          const down = data[2] >= 64;
-          setSustain(down);
-          input.sustain(down);
-        }
-      };
-    });
-    setStatus({ state: 'ready', devices });
-  };
-
-  access.onstatechange = attach;
-  attach();
+  access.onstatechange = () => { if (access) attach(access); };
+  attach(access);
   initializing = false;
 }
