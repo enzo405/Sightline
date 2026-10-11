@@ -1,11 +1,12 @@
 // Free Play — no scoring, no targets. A Synthesia-style visual filling the
 // whole view: every note you play (MIDI, the on-screen keyboard, or the
-// computer keys) rises from a baseline near the bottom as a glowing bar,
-// growing taller while it sounds, then detaching and floating up to the top
-// once it stops. The sustain pedal keeps released notes sounding — so their
-// bars keep growing — until the pedal is lifted. Pitch sets the lane and hue;
-// velocity sets the brightness. Sound is produced by the input sources
-// themselves, so this page only listens to the shared note bus and paints.
+// computer keys) rises as a glowing bar straight from its key at the bottom,
+// growing while it sounds, then detaching and drifting up once it stops. The
+// sustain pedal keeps released notes sounding — so their bars keep growing —
+// until the pedal is lifted. Every note shares one accent colour and fades out
+// along its length as it ages. The floating note names can be toggled off.
+// Sound is produced by the input sources themselves, so this page only listens
+// to the shared note bus and paints.
 
 import { input } from './events';
 import { noteName, t } from './i18n';
@@ -13,20 +14,19 @@ import { noteName, t } from './i18n';
 const LOW = 21;   // A0
 const HIGH = 108; // C8
 const SPAN = HIGH - LOW;
-const RISE = 2.4; // px per 60fps-frame the bars travel upward
+const RISE = 3.2; // px per 60fps-frame the bars travel upward (long, tall bars)
+const HUE = 212;  // single accent-blue hue shared by every note
 
 interface Bar {
-  midi: number;
   x: number;
   w: number;
-  hue: number;
   alpha: number;    // brightness from velocity
   headY: number;    // leading (top) edge — always rising
   tailY: number;    // trailing (bottom) edge — pinned to baseline while sounding
   keyHeld: boolean; // physical key still down
   pedalHeld: boolean; // sustained by the pedal after key release
 }
-interface Label { x: number; y: number; life: number; text: string; hue: number; }
+interface Label { x: number; y: number; life: number; text: string; }
 
 const sounding = (b: Bar) => b.keyHeld || b.pedalHeld;
 
@@ -45,6 +45,7 @@ export function mountFreePlay(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="play-stage">
       <canvas id="play-canvas"></canvas>
+      <button class="play-toggle" id="play-names"></button>
       <div class="play-hint" id="play-hint">${t('play.hint')}</div>
     </div>
   `;
@@ -56,7 +57,28 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const stage = root.querySelector('.play-stage') as HTMLElement;
   const canvas = root.querySelector('#play-canvas') as HTMLCanvasElement;
   const hint = root.querySelector('#play-hint') as HTMLElement;
+  const namesBtn = root.querySelector('#play-names') as HTMLButtonElement;
   const ctx = canvas.getContext('2d')!;
+
+  const bars: Bar[] = [];
+  const labels: Label[] = [];
+  const active = new Map<number, Bar>(); // midi -> its live (key-held) bar
+  // Reflect the pedal's real state on entry: if it's already held down when the
+  // page opens, released notes should be sustained right away.
+  let pedalDown = input.sustainDown();
+
+  // Note-name labels can be switched on/off.
+  let showNames = true;
+  function renderNamesBtn() {
+    namesBtn.textContent = showNames ? t('play.namesHide') : t('play.namesShow');
+    namesBtn.classList.toggle('off', !showNames);
+  }
+  renderNamesBtn();
+  namesBtn.addEventListener('click', () => {
+    showNames = !showNames;
+    if (!showNames) labels.length = 0; // hide any still on screen
+    renderNamesBtn();
+  });
 
   let W = 0;
   let H = 0;
@@ -66,7 +88,7 @@ export function mountFreePlay(root: HTMLElement): () => void {
     const r = stage.getBoundingClientRect();
     W = r.width;
     H = r.height;
-    baseline = H - 56;
+    baseline = H; // bars start at the very bottom, right on top of the keyboard
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -75,31 +97,36 @@ export function mountFreePlay(root: HTMLElement): () => void {
   ro.observe(stage);
   resize();
 
-  const bars: Bar[] = [];
-  const labels: Label[] = [];
-  const active = new Map<number, Bar>(); // midi -> its live (key-held) bar
-  // Reflect the pedal's real state on entry: if it's already held down when the
-  // page opens, released notes should be sustained right away.
-  let pedalDown = input.sustainDown();
-
   const laneW = () => W / (SPAN + 1);
   const xFor = (midi: number) => (midi - LOW) * laneW();
-  const hueFor = (midi: number) => (midi % 12) * 30;
+
+  // Place a new bar straight above its on-screen key (so the note appears to
+  // rise out of the key); fall back to an even lane if the key isn't laid out.
+  function placeFor(midi: number): { x: number; w: number } {
+    const keyEl = document.querySelector(`.pkey[data-midi="${midi}"]`) as HTMLElement | null;
+    if (keyEl) {
+      const kr = keyEl.getBoundingClientRect();
+      if (kr.width > 0) {
+        const cr = canvas.getBoundingClientRect();
+        return { x: kr.left - cr.left, w: kr.width };
+      }
+    }
+    const lw = laneW();
+    return { x: xFor(midi) + lw * 0.12, w: lw * 0.76 };
+  }
 
   const offOn = input.onNoteOn((e) => {
     hint.classList.add('hidden');
-    const lw = laneW();
-    const x = xFor(e.midi) + lw * 0.12;
-    const hue = hueFor(e.midi);
-    const alpha = Math.max(0.45, Math.min(1, e.velocity / 110));
+    const { x, w } = placeFor(e.midi);
+    const alpha = Math.max(0.5, Math.min(1, e.velocity / 110));
     // retrigger: the previous bar for this key stops being key-held; the pedal
     // may keep it sounding if it's down.
     const prev = active.get(e.midi);
     if (prev) { prev.keyHeld = false; prev.pedalHeld = pedalDown; }
-    const bar: Bar = { midi: e.midi, x, w: lw * 0.76, hue, alpha, headY: baseline, tailY: baseline, keyHeld: true, pedalHeld: false };
+    const bar: Bar = { x, w, alpha, headY: baseline, tailY: baseline, keyHeld: true, pedalHeld: false };
     bars.push(bar);
     active.set(e.midi, bar);
-    labels.push({ x: x + lw * 0.38, y: baseline + 22, life: 1, text: noteName(e.midi), hue });
+    if (showNames) labels.push({ x: x + w / 2, y: baseline - 14, life: 1, text: noteName(e.midi) });
   });
   const offOff = input.onNoteOff((e) => {
     const bar = active.get(e.midi);
@@ -123,11 +150,11 @@ export function mountFreePlay(root: HTMLElement): () => void {
     last = nowMs;
     const v = RISE * dt;
 
-    // clear fully each frame → crisp bars with no trailing, and no white
-    // guides or baseline; the real app background shows straight through.
+    // clear fully each frame → crisp bars with no trailing; the real app
+    // background shows straight through and blends in.
     ctx.clearRect(0, 0, W, H);
 
-    // rising bars
+    // rising bars — all one colour, each fading out along its length as it ages
     ctx.globalCompositeOperation = 'lighter';
     for (let i = bars.length - 1; i >= 0; i--) {
       const b = bars[i];
@@ -135,38 +162,47 @@ export function mountFreePlay(root: HTMLElement): () => void {
       b.tailY = sounding(b) ? baseline : b.tailY - v;
       const top = b.headY;
       const h = b.tailY - top;
-      if (h <= 0 || b.tailY < -24) { bars.splice(i, 1); continue; }
+      if (h <= 0 || b.tailY < -40) { bars.splice(i, 1); continue; }
 
-      const fade = Math.max(0, Math.min(1, b.tailY / (H * 0.5)));
-      const a = b.alpha * (sounding(b) ? 1 : Math.max(0.25, fade));
+      // once released, the whole bar dims as it travels up toward the top
+      const fade = Math.max(0, Math.min(1, b.tailY / (H * 0.6)));
+      const a = b.alpha * (sounding(b) ? 1 : fade);
+      if (!sounding(b) && a <= 0.02) { bars.splice(i, 1); continue; }
+
+      // gradient down the bar: transparent at the older top → solid at the new
+      // bottom, so each note visibly fades out with time.
       const grd = ctx.createLinearGradient(0, top, 0, b.tailY);
-      grd.addColorStop(0, `hsla(${b.hue}, 95%, 72%, ${a})`);
-      grd.addColorStop(1, `hsla(${b.hue}, 90%, 55%, ${a * 0.85})`);
+      grd.addColorStop(0, `hsla(${HUE}, 90%, 72%, 0)`);
+      grd.addColorStop(0.6, `hsla(${HUE}, 95%, 66%, ${a * 0.5})`);
+      grd.addColorStop(1, `hsla(${HUE}, 96%, 60%, ${a})`);
       ctx.fillStyle = grd;
-      ctx.shadowColor = `hsla(${b.hue}, 95%, 65%, ${a})`;
-      ctx.shadowBlur = 16;
-      roundRectPath(ctx, b.x, top, b.w, h, Math.min(5, b.w / 2));
+      ctx.shadowColor = `hsla(${HUE}, 95%, 60%, ${a})`;
+      ctx.shadowBlur = 22;
+      roundRectPath(ctx, b.x, top, b.w, h, Math.min(7, b.w / 2));
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // bright cap where the note meets the baseline while it sounds
+      // bright cap where the note meets the keyboard while it sounds
       if (sounding(b)) {
-        ctx.fillStyle = `hsla(${b.hue}, 100%, 85%, ${a})`;
-        roundRectPath(ctx, b.x, baseline - 4, b.w, 4, 2);
+        ctx.fillStyle = `hsla(${HUE}, 100%, 88%, ${a})`;
+        roundRectPath(ctx, b.x, baseline - 5, b.w, 5, 2.5);
         ctx.fill();
       }
     }
 
-    // floating note names
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.textAlign = 'center';
-    ctx.font = '600 15px system-ui, -apple-system, sans-serif';
-    for (let i = labels.length - 1; i >= 0; i--) {
-      const l = labels[i];
-      l.life -= 0.02 * dt;
-      if (l.life <= 0) { labels.splice(i, 1); continue; }
-      ctx.fillStyle = `hsla(${l.hue}, 90%, 78%, ${l.life})`;
-      ctx.fillText(l.text, l.x, l.y);
+    // floating note names (drift up while fading), when enabled
+    if (showNames) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.textAlign = 'center';
+      ctx.font = '600 15px system-ui, -apple-system, sans-serif';
+      for (let i = labels.length - 1; i >= 0; i--) {
+        const l = labels[i];
+        l.life -= 0.018 * dt;
+        l.y -= v * 0.4;
+        if (l.life <= 0) { labels.splice(i, 1); continue; }
+        ctx.fillStyle = `hsla(${HUE}, 85%, 82%, ${l.life})`;
+        ctx.fillText(l.text, l.x, l.y);
+      }
     }
 
     raf = requestAnimationFrame(frame);
