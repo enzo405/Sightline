@@ -72,6 +72,11 @@ function fmtDayDate(day: number): string {
   return dayDate(day).toLocaleDateString(lang(), { day: 'numeric', month: 'short' });
 }
 
+/** "Day N counts in 7 h 05 min." — the live line shown while you're ahead. */
+function unlockLine(day: number): string {
+  return t('daily.unlockIn', { day, time: fmtDuration(msUntilTomorrow()) });
+}
+
 /** True when the player let too many days pass mid-journey — the series is lost. */
 function streakBroken(): boolean {
   const last = dailyLastDate();
@@ -129,6 +134,9 @@ export function mountDaily(root: HTMLElement): () => void {
   // Live "unlocks in …" ticker shown after an early (practice) frontier run.
   let countdown: number | null = null;
   function clearCountdown() { if (countdown !== null) { clearInterval(countdown); countdown = null; } }
+  // Live countdown kept on the overview card while you're ahead for the day.
+  let overviewTick: number | null = null;
+  function clearOverviewTick() { if (overviewTick !== null) { clearInterval(overviewTick); overviewTick = null; } }
 
   // ---------- overview + calendar ----------
   function renderOverview() {
@@ -146,7 +154,12 @@ export function mountDaily(root: HTMLElement): () => void {
     else if (advancedToday()) status = t('daily.restToday');
     else status = t('daily.onTrack', { day: nd });
 
+    // When today's day is already earned, the next day can only be *tested* until
+    // midnight — surface a live countdown to when finishing it will actually count.
+    const ahead = !seriesLost && done > 0 && done < DAILY_TOTAL && advancedToday();
+
     const parts = [status];
+    if (ahead) parts.push(`<span class="daily-unlock-note" id="daily-overview-countdown">${unlockLine(nd)}</span>`);
     if (done < DAILY_TOTAL) parts.push(`<span class="daily-streak-note">${t('daily.streakLabel', { n: done, total: DAILY_TOTAL })} · ${t('daily.graceNote')}</span>`);
     parts.push(`<span class="daily-diff-note">${t('daily.difficultyNote', { level: diffName })}</span>`);
     subEl.innerHTML = parts.join('<br>');
@@ -154,9 +167,22 @@ export function mountDaily(root: HTMLElement): () => void {
     if (seriesLost) subEl.classList.add('daily-lost'); else subEl.classList.remove('daily-lost');
 
     continueBtn.disabled = false;
-    continueBtn.textContent = done === 0
-      ? t('daily.start')
-      : done >= DAILY_TOTAL ? t('daily.review') : t('daily.continue', { day: nd });
+    continueBtn.textContent =
+      done === 0 ? t('daily.start')
+      : done >= DAILY_TOTAL ? t('daily.review')
+      : ahead ? t('daily.testDay', { day: nd })
+      : t('daily.continue', { day: nd });
+
+    // keep the overview countdown ticking; at midnight it flips back to "Continue"
+    clearOverviewTick();
+    if (ahead) {
+      overviewTick = window.setInterval(() => {
+        const el = subEl.querySelector('#daily-overview-countdown');
+        if (!el) { clearOverviewTick(); return; }
+        if (msUntilTomorrow() <= 0) { renderOverview(); renderGrid(); return; }
+        el.textContent = unlockLine(nextOpenDay());
+      }, 30000);
+    }
   }
 
   function renderGrid() {
@@ -381,5 +407,6 @@ export function mountDaily(root: HTMLElement): () => void {
     engine?.dispose();
     clearTimer();
     clearCountdown();
+    clearOverviewTick();
   };
 }

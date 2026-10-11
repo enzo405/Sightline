@@ -1287,6 +1287,14 @@ footer {
   color: var(--accent);
 }
 
+.daily-unlock-note {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* ---------- Mirror bookmarks ---------- */
 .mir-bookmarks {
   margin-top: 18px;
