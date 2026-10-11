@@ -19,6 +19,9 @@ export function mountSightread(root: HTMLElement): () => void {
     </div>
     <div class="toolbar">
       <span class="level-badge">${t('read.level')} <b id="sr-level"></b>/10</span>
+      <label>${t('read.levelPick')}
+        <select id="sr-levelsel"></select>
+      </label>
       <span class="status-text" id="sr-key"></span>
       <label>${t('read.clef')}
         <select id="sr-clef">
@@ -34,6 +37,7 @@ export function mountSightread(root: HTMLElement): () => void {
   `;
 
   const levelEl = root.querySelector('#sr-level') as HTMLElement;
+  const levelSelEl = root.querySelector('#sr-levelsel') as HTMLSelectElement;
   const keyEl = root.querySelector('#sr-key') as HTMLElement;
   const clefEl = root.querySelector('#sr-clef') as HTMLSelectElement;
   const newBtn = root.querySelector('#sr-new') as HTMLButtonElement;
@@ -45,6 +49,32 @@ export function mountSightread(root: HTMLElement): () => void {
   let engine: PlayThrough | null = null;
   let misses = 0;
 
+  // Normally the level adapts automatically (the "Auto" option). Picking a
+  // specific level is a free practice run: it plays that level without touching
+  // — or being changed by — your real adaptive progression.
+  let manual = false;
+  let practiceLevel = progress().sightread.level;
+
+  /** Highest level ever unlocked — the ceiling for manual practice so you can
+   *  revisit anything you've reached but not skip ahead of the adaptive climb. */
+  function maxReached(): number {
+    const p = progress();
+    let m = p.sightread.level;
+    for (const r of p.sightread.history) if (r.level > m) m = r.level;
+    return Math.min(10, Math.max(1, m));
+  }
+  function currentLevel(): number {
+    return manual ? practiceLevel : progress().sightread.level;
+  }
+  function populateLevelSel() {
+    const max = maxReached();
+    if (manual && practiceLevel > max) practiceLevel = max;
+    let html = `<option value="auto">${t('read.levelAuto')}</option>`;
+    for (let l = 1; l <= max; l++) html += `<option value="${l}">${l}</option>`;
+    levelSelEl.innerHTML = html;
+    levelSelEl.value = manual ? String(practiceLevel) : 'auto';
+  }
+
   const translateFlags = (flags: Map<number, string>): Map<number, string> => {
     const out = new Map<number, string>();
     for (const [i, f] of flags) out.set(i, t(`flag.${f}`));
@@ -55,7 +85,7 @@ export function mountSightread(root: HTMLElement): () => void {
     engine?.dispose();
     misses = 0;
     resultsEl.classList.add('hidden');
-    const level = progress().sightread.level;
+    const level = currentLevel();
     exercise = generateExercise(level, clefEl.value as 'treble' | 'bass');
     levelEl.textContent = String(level);
     keyEl.textContent = t('read.key', { key: keyName(exercise.key) });
@@ -91,21 +121,28 @@ export function mountSightread(root: HTMLElement): () => void {
 
   function finish(res: PlayResult, totalNotes: number, rerenderWithFlags: () => void) {
     const p = progress();
-    const oldLevel = p.sightread.level;
+    const playedLevel = currentLevel();
     let change = '';
-    if (res.accuracy >= 0.92 && oldLevel < 10) {
-      p.sightread.level = oldLevel + 1;
-      change = t('read.levelUp', { level: p.sightread.level });
-    } else if (res.accuracy < 0.75 && oldLevel > 1) {
-      p.sightread.level = oldLevel - 1;
-      change = t('read.levelDown', { level: p.sightread.level });
+    if (manual) {
+      // free practice — don't adapt or persist the adaptive level
+      change = t('read.practiceMode', { level: playedLevel });
     } else {
-      change = t('read.levelHold');
+      const oldLevel = p.sightread.level;
+      if (res.accuracy >= 0.92 && oldLevel < 10) {
+        p.sightread.level = oldLevel + 1;
+        change = t('read.levelUp', { level: p.sightread.level });
+      } else if (res.accuracy < 0.75 && oldLevel > 1) {
+        p.sightread.level = oldLevel - 1;
+        change = t('read.levelDown', { level: p.sightread.level });
+      } else {
+        change = t('read.levelHold');
+      }
+      save();
+      populateLevelSel(); // a new top level may have opened up for practice
     }
-    save();
     recordSightread({
       date: new Date().toISOString(),
-      level: oldLevel,
+      level: playedLevel,
       key: exercise!.key,
       clef: exercise!.clef,
       accuracy: res.accuracy,
@@ -132,8 +169,15 @@ export function mountSightread(root: HTMLElement): () => void {
     rerenderWithFlags();
   }
 
+  levelSelEl.addEventListener('change', () => {
+    const v = levelSelEl.value;
+    if (v === 'auto') manual = false;
+    else { manual = true; practiceLevel = Number(v); }
+    startExercise();
+  });
   clefEl.addEventListener('change', startExercise);
   newBtn.addEventListener('click', startExercise);
+  populateLevelSel();
   startExercise();
 
   return () => engine?.dispose();
