@@ -43,7 +43,10 @@ export function mountFreePlay(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="play-stage">
       <canvas id="play-canvas"></canvas>
-      <button class="play-toggle" id="play-names"></button>
+      <div class="play-controls">
+        <button class="play-toggle" id="play-full"></button>
+        <button class="play-toggle" id="play-names"></button>
+      </div>
       <div class="play-hint" id="play-hint">${t('play.hint')}</div>
     </div>
   `;
@@ -56,7 +59,23 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const canvas = root.querySelector('#play-canvas') as HTMLCanvasElement;
   const hint = root.querySelector('#play-hint') as HTMLElement;
   const namesBtn = root.querySelector('#play-names') as HTMLButtonElement;
+  const fullBtn = root.querySelector('#play-full') as HTMLButtonElement;
   const ctx = canvas.getContext('2d')!;
+
+  // Fullscreen toggle — also hides the app header while active.
+  function renderFullBtn() {
+    fullBtn.textContent = document.fullscreenElement ? t('play.exitFull') : t('play.fullscreen');
+  }
+  function onFsChange() {
+    appEl?.classList.toggle('fs', !!document.fullscreenElement);
+    renderFullBtn();
+  }
+  document.addEventListener('fullscreenchange', onFsChange);
+  fullBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void appEl?.requestFullscreen?.();
+  });
+  renderFullBtn();
 
   const bars: Bar[] = [];
   const labels: Label[] = [];
@@ -94,20 +113,25 @@ export function mountFreePlay(root: HTMLElement): () => void {
 
   const laneW = () => W / (SPAN + 1);
   const xFor = (midi: number) => (midi - LOW) * laneW();
+  const WIDTH = 0.67; // bars are 33% thinner than their key / lane
 
   // Place a new bar straight above its on-screen key (so the note appears to
   // rise out of the key); fall back to an even lane if the key isn't laid out.
+  // Either way the bar is slimmed and kept centred over the key.
   function placeFor(midi: number): { x: number; w: number } {
     const keyEl = document.querySelector(`.pkey[data-midi="${midi}"]`) as HTMLElement | null;
     if (keyEl) {
       const kr = keyEl.getBoundingClientRect();
       if (kr.width > 0) {
         const cr = canvas.getBoundingClientRect();
-        return { x: kr.left - cr.left, w: kr.width };
+        const w = kr.width * WIDTH;
+        return { x: kr.left - cr.left + (kr.width - w) / 2, w };
       }
     }
     const lw = laneW();
-    return { x: xFor(midi) + lw * 0.12, w: lw * 0.76 };
+    const full = lw * 0.76;
+    const w = full * WIDTH;
+    return { x: xFor(midi) + lw * 0.12 + (full - w) / 2, w };
   }
 
   const offOn = input.onNoteOn((e) => {
@@ -220,7 +244,9 @@ export function mountFreePlay(root: HTMLElement): () => void {
   return () => {
     cancelAnimationFrame(raf);
     ro.disconnect();
-    appEl?.classList.remove('immersive');
+    document.removeEventListener('fullscreenchange', onFsChange);
+    if (document.fullscreenElement) void document.exitFullscreen();
+    appEl?.classList.remove('immersive', 'fs');
     offOn();
     offOff();
   };

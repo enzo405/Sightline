@@ -122,6 +122,8 @@ const EN: Dict = {
   'play.hint': 'Play a note to begin…',
   'play.namesShow': 'Show note names',
   'play.namesHide': 'Hide note names',
+  'play.fullscreen': 'Fullscreen',
+  'play.exitFull': 'Exit fullscreen',
   'tut.play': 'Play from your MIDI piano, the on-screen keys, or the A–; computer-keyboard row.|Each note rises from the baseline as a coloured bar that grows while you hold it, then floats up and away — pitch sets the colour, how hard you play sets the brightness.|There is nothing to pass here: just enjoy the sound and the light.',
 
   // Sight-reading
@@ -456,6 +458,8 @@ const FR: Dict = {
   'play.hint': 'Jouez une note pour commencer…',
   'play.namesShow': 'Afficher les noms',
   'play.namesHide': 'Masquer les noms',
+  'play.fullscreen': 'Plein écran',
+  'play.exitFull': 'Quitter le plein écran',
   'tut.play': 'Jouez depuis votre piano MIDI, le clavier à l’écran, ou la rangée A–; du clavier d’ordinateur.|Chaque note s’élève depuis la ligne de base en une barre colorée qui s’allonge tant que vous la tenez, puis s’envole vers le haut — la hauteur donne la couleur, la force donne l’éclat.|Rien à réussir ici : profitez simplement du son et de la lumière.',
 
   // Déchiffrage
