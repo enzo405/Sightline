@@ -3,10 +3,10 @@
 // computer keys) rises as a glowing bar straight from its key at the bottom,
 // growing while it sounds, then detaching and drifting up once it stops. The
 // sustain pedal keeps released notes sounding — so their bars keep growing —
-// until the pedal is lifted. Every note shares one accent colour and fades out
-// along its length as it ages. The floating note names can be toggled off.
-// Sound is produced by the input sources themselves, so this page only listens
-// to the shared note bus and paints.
+// until the pedal is lifted. Every note shares one colour that drifts to a new
+// random hue every 10s, and each bar fades out along its length as it ages.
+// The floating note names can be toggled off. Sound is produced by the input
+// sources themselves, so this page only listens to the shared note bus.
 
 import { input } from './events';
 import { noteName, t } from './i18n';
@@ -119,10 +119,11 @@ export function mountFreePlay(root: HTMLElement): () => void {
     hint.classList.add('hidden');
     const { x, w } = placeFor(e.midi);
     const alpha = Math.max(0.5, Math.min(1, e.velocity / 110));
-    // retrigger: the previous bar for this key stops being key-held; the pedal
-    // may keep it sounding if it's down.
+    // retrigger: the previous bar for this key is finished off (it detaches and
+    // drifts up) even if the pedal is down, so repeats don't stack one bar on
+    // top of another at the key — only the new note sits at the baseline.
     const prev = active.get(e.midi);
-    if (prev) { prev.keyHeld = false; prev.pedalHeld = pedalDown; }
+    if (prev) { prev.keyHeld = false; prev.pedalHeld = false; }
     const bar: Bar = { x, w, alpha, headY: baseline, tailY: baseline, keyHeld: true, pedalHeld: false };
     bars.push(bar);
     active.set(e.midi, bar);
@@ -145,10 +146,23 @@ export function mountFreePlay(root: HTMLElement): () => void {
 
   let raf = 0;
   let last = performance.now();
+  // The shared note colour drifts toward a fresh random hue every 10 seconds,
+  // easing over a second or so so the palette shifts gently rather than snaps.
+  let hue = HUE;
+  let targetHue = HUE;
+  let lastHueSwitch = last;
   function frame(nowMs: number) {
     const dt = Math.min(2.5, (nowMs - last) / 16.67);
     last = nowMs;
     const v = RISE * dt;
+
+    // pick a new target hue every 10s, then ease toward it along the short way
+    if (nowMs - lastHueSwitch >= 10000) {
+      targetHue = (hue + 80 + Math.random() * 200) % 360;
+      lastHueSwitch = nowMs;
+    }
+    const dh = ((targetHue - hue + 540) % 360) - 180;
+    hue = (hue + dh * Math.min(1, 0.012 * dt) + 360) % 360;
 
     // clear fully each frame → crisp bars with no trailing; the real app
     // background shows straight through and blends in.
@@ -172,11 +186,11 @@ export function mountFreePlay(root: HTMLElement): () => void {
       // gradient down the bar: transparent at the older top → solid at the new
       // bottom, so each note visibly fades out with time.
       const grd = ctx.createLinearGradient(0, top, 0, b.tailY);
-      grd.addColorStop(0, `hsla(${HUE}, 90%, 72%, 0)`);
-      grd.addColorStop(0.6, `hsla(${HUE}, 95%, 66%, ${a * 0.5})`);
-      grd.addColorStop(1, `hsla(${HUE}, 96%, 60%, ${a})`);
+      grd.addColorStop(0, `hsla(${hue}, 90%, 72%, 0)`);
+      grd.addColorStop(0.6, `hsla(${hue}, 95%, 66%, ${a * 0.5})`);
+      grd.addColorStop(1, `hsla(${hue}, 96%, 60%, ${a})`);
       ctx.fillStyle = grd;
-      ctx.shadowColor = `hsla(${HUE}, 95%, 60%, ${a})`;
+      ctx.shadowColor = `hsla(${hue}, 95%, 60%, ${a})`;
       ctx.shadowBlur = 22;
       roundRectPath(ctx, b.x, top, b.w, h, Math.min(7, b.w / 2));
       ctx.fill();
@@ -184,7 +198,7 @@ export function mountFreePlay(root: HTMLElement): () => void {
 
       // bright cap where the note meets the keyboard while it sounds
       if (sounding(b)) {
-        ctx.fillStyle = `hsla(${HUE}, 100%, 88%, ${a})`;
+        ctx.fillStyle = `hsla(${hue}, 100%, 88%, ${a})`;
         roundRectPath(ctx, b.x, baseline - 5, b.w, 5, 2.5);
         ctx.fill();
       }
@@ -200,7 +214,7 @@ export function mountFreePlay(root: HTMLElement): () => void {
         l.life -= 0.018 * dt;
         l.y -= v * 0.4;
         if (l.life <= 0) { labels.splice(i, 1); continue; }
-        ctx.fillStyle = `hsla(${HUE}, 85%, 82%, ${l.life})`;
+        ctx.fillStyle = `hsla(${hue}, 85%, 82%, ${l.life})`;
         ctx.fillText(l.text, l.x, l.y);
       }
     }
