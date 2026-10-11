@@ -119,11 +119,20 @@ export function mountFreePlay(root: HTMLElement): () => void {
     hint.classList.add('hidden');
     const { x, w } = placeFor(e.midi);
     const alpha = Math.max(0.5, Math.min(1, e.velocity / 110));
-    // retrigger: the previous bar for this key is finished off (it detaches and
-    // drifts up) even if the pedal is down, so repeats don't stack one bar on
-    // top of another at the key — only the new note sits at the baseline.
+    // retrigger: the previous bar for this key is finished off and snapped up a
+    // notch (with a minimum length) so there's a clear gap — you see the end of
+    // the previous note before the new one, even while the pedal is held and
+    // even when spamming the same key fast.
     const prev = active.get(e.midi);
-    if (prev) { prev.keyHeld = false; prev.pedalHeld = false; }
+    if (prev) {
+      prev.keyHeld = false;
+      prev.pedalHeld = false;
+      const RETRIGGER_GAP = 12;
+      const MIN_LEN = 18;
+      const len = Math.max(MIN_LEN, prev.tailY - prev.headY);
+      prev.tailY = baseline - RETRIGGER_GAP;
+      prev.headY = prev.tailY - len;
+    }
     const bar: Bar = { x, w, alpha, headY: baseline, tailY: baseline, keyHeld: true, pedalHeld: false };
     bars.push(bar);
     active.set(e.midi, bar);
