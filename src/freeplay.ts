@@ -1,12 +1,11 @@
 // Free Play — no scoring, no targets. A Synthesia-style visual filling the
 // whole view: every note you play (MIDI, the on-screen keyboard, or the
 // computer keys) rises as a glowing bar straight from its key at the bottom,
-// growing while it sounds, then detaching and drifting up once it stops. The
-// sustain pedal keeps released notes sounding — so their bars keep growing —
-// until the pedal is lifted. Every note shares one colour that drifts to a new
-// random hue every 10s, and each bar fades out along its length as it ages.
-// The floating note names can be toggled off. Sound is produced by the input
-// sources themselves, so this page only listens to the shared note bus.
+// growing while it's held, then detaching and drifting up once you release it.
+// Every note shares one colour that drifts to a new random hue every 10s, and
+// each bar fades out along its length as it ages. The floating note names can
+// be toggled off. Sound is produced by the input sources themselves, so this
+// page only listens to the shared note bus and paints.
 
 import { input } from './events';
 import { noteName, t } from './i18n';
@@ -22,13 +21,12 @@ interface Bar {
   w: number;
   alpha: number;    // brightness from velocity
   headY: number;    // leading (top) edge — always rising
-  tailY: number;    // trailing (bottom) edge — pinned to baseline while sounding
+  tailY: number;    // trailing (bottom) edge — pinned to baseline while held
   keyHeld: boolean; // physical key still down
-  pedalHeld: boolean; // sustained by the pedal after key release
 }
 interface Label { x: number; y: number; life: number; text: string; }
 
-const sounding = (b: Bar) => b.keyHeld || b.pedalHeld;
+const sounding = (b: Bar) => b.keyHeld;
 
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -63,9 +61,6 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const bars: Bar[] = [];
   const labels: Label[] = [];
   const active = new Map<number, Bar>(); // midi -> its live (key-held) bar
-  // Reflect the pedal's real state on entry: if it's already held down when the
-  // page opens, released notes should be sustained right away.
-  let pedalDown = input.sustainDown();
 
   // Note-name labels can be switched on/off — hidden by default.
   let showNames = false;
@@ -121,19 +116,17 @@ export function mountFreePlay(root: HTMLElement): () => void {
     const alpha = Math.max(0.5, Math.min(1, e.velocity / 110));
     // retrigger: the previous bar for this key is finished off and snapped up a
     // notch (with a minimum length) so there's a clear gap — you see the end of
-    // the previous note before the new one, even while the pedal is held and
-    // even when spamming the same key fast.
+    // the previous note before the new one, even when spamming the same key fast.
     const prev = active.get(e.midi);
     if (prev) {
       prev.keyHeld = false;
-      prev.pedalHeld = false;
       const RETRIGGER_GAP = 12;
       const MIN_LEN = 18;
       const len = Math.max(MIN_LEN, prev.tailY - prev.headY);
       prev.tailY = baseline - RETRIGGER_GAP;
       prev.headY = prev.tailY - len;
     }
-    const bar: Bar = { x, w, alpha, headY: baseline, tailY: baseline, keyHeld: true, pedalHeld: false };
+    const bar: Bar = { x, w, alpha, headY: baseline, tailY: baseline, keyHeld: true };
     bars.push(bar);
     active.set(e.midi, bar);
     if (showNames) labels.push({ x: x + w / 2, y: baseline - 14, life: 1, text: noteName(e.midi) });
@@ -141,16 +134,8 @@ export function mountFreePlay(root: HTMLElement): () => void {
   const offOff = input.onNoteOff((e) => {
     const bar = active.get(e.midi);
     if (!bar) return;
-    bar.keyHeld = false;
-    bar.pedalHeld = pedalDown; // the pedal holds the note until it lifts
+    bar.keyHeld = false; // released → it detaches and drifts up
     active.delete(e.midi);
-  });
-  const offSustain = input.onSustain((down) => {
-    pedalDown = down;
-    if (!down) {
-      // pedal lifted → notes kept only by the pedal now stop and detach
-      for (const b of bars) if (b.pedalHeld && !b.keyHeld) b.pedalHeld = false;
-    }
   });
 
   let raf = 0;
@@ -238,6 +223,5 @@ export function mountFreePlay(root: HTMLElement): () => void {
     appEl?.classList.remove('immersive');
     offOn();
     offOff();
-    offSustain();
   };
 }
