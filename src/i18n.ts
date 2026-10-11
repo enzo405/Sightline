@@ -278,6 +278,7 @@ const EN: Dict = {
   'daily.retry': 'Try again →',
   'daily.dayDone': 'Day {day} complete — nicely done!',
   'daily.earlyNoCount': 'Day {day} isn’t due yet — this run is practice and won’t count.',
+  'daily.unlockIn': 'Day {day} unlocks in {time}.',
   'daily.nextDay': 'Start day {day} →',
   'daily.toCalendar': 'Back to calendar',
 
@@ -614,6 +615,7 @@ const FR: Dict = {
   'daily.retry': 'Réessayer →',
   'daily.dayDone': 'Jour {day} terminé — bien joué !',
   'daily.earlyNoCount': 'Le jour {day} n’est pas encore dû — cet essai est un entraînement et ne compte pas.',
+  'daily.unlockIn': 'Le jour {day} se débloque dans {time}.',
   'daily.nextDay': 'Commencer le jour {day} →',
   'daily.toCalendar': 'Retour au calendrier',
 

@@ -5,7 +5,7 @@
 // Reuses the PlayThrough engine and notation renderer; completion is stored in
 // progress so the month survives reloads.
 
-import { keyName, t } from './i18n';
+import { keyName, lang, t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { mainStream, renderScore, NoteStatus } from './notation';
 import { PlayThrough } from './playthrough';
@@ -32,6 +32,44 @@ function daysSince(iso: string): number {
 function advancedToday(): boolean {
   const last = dailyLastDate();
   return last !== null && daysSince(last) === 0;
+}
+
+/** Milliseconds from now until the next local midnight — when the frontier day
+ *  becomes earnable again. */
+function msUntilTomorrow(): number {
+  const n = new Date();
+  const mid = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0);
+  return mid.getTime() - n.getTime();
+}
+
+/** "7 h 05 min" / "42 min" — a human countdown for the next unlock. */
+function fmtDuration(ms: number): string {
+  const totalMin = Math.max(0, Math.ceil(ms / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`;
+}
+
+/** The calendar date a journey day maps to: completed days use the date they
+ *  were earned; upcoming days are projected one per calendar day from the next
+ *  day you can earn (today, or tomorrow if a day already counted today). */
+function dayDate(day: number): Date {
+  const iso = progress().daily.done[day];
+  if (iso) {
+    const d = new Date(iso);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  const frontier = dailyHighestDone() + 1;
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  if (advancedToday()) base.setDate(base.getDate() + 1);
+  base.setDate(base.getDate() + (day - frontier));
+  return base;
+}
+
+/** Short localized date label shown under each calendar number (e.g. "12 oct."). */
+function fmtDayDate(day: number): string {
+  return dayDate(day).toLocaleDateString(lang(), { day: 'numeric', month: 'short' });
 }
 
 /** True when the player let too many days pass mid-journey — the series is lost. */
@@ -88,6 +126,9 @@ export function mountDaily(root: HTMLElement): () => void {
   let engine: PlayThrough | null = null;
   let timer: number | null = null;
   function clearTimer() { if (timer !== null) { clearTimeout(timer); timer = null; } }
+  // Live "unlocks in …" ticker shown after an early (practice) frontier run.
+  let countdown: number | null = null;
+  function clearCountdown() { if (countdown !== null) { clearInterval(countdown); countdown = null; } }
 
   // ---------- overview + calendar ----------
   function renderOverview() {
@@ -134,7 +175,8 @@ export function mountDaily(root: HTMLElement): () => void {
         : !unlocked ? '<span class="cal-badge">🔒</span>' : '';
       const disabled = unlocked ? '' : ' disabled';
       html += `<button class="${cls.join(' ')}" data-day="${day}"${disabled}>
-        <span class="cal-num">${day}</span>${badge}</button>`;
+        <span class="cal-num">${day}</span>
+        <span class="cal-date">${fmtDayDate(day)}</span>${badge}</button>`;
     }
     gridEl.innerHTML = html;
   }
@@ -148,6 +190,7 @@ export function mountDaily(root: HTMLElement): () => void {
     engine?.dispose();
     engine = null;
     clearTimer();
+    clearCountdown();
     def = null;
     detailEl.classList.add('hidden');
     detailEl.innerHTML = '';
@@ -158,6 +201,7 @@ export function mountDaily(root: HTMLElement): () => void {
     engine?.dispose();
     engine = null;
     clearTimer();
+    clearCountdown();
     def = dailyDay(day, settings().difficulty);
     taskDone = def.tasks.map(() => false);
     detailEl.classList.remove('hidden');
@@ -286,7 +330,7 @@ export function mountDaily(root: HTMLElement): () => void {
       // attempted the next day ahead of its calendar day — practice only
       emoji = '🌙';
       banner = t('daily.earlyNoCount', { day });
-      action = `<p class="muted daily-rest-msg">${t('daily.comeBackTomorrow')}</p>`;
+      action = `<p class="muted daily-rest-msg" id="daily-countdown">${t('daily.unlockIn', { day, time: fmtDuration(msUntilTomorrow()) })}</p>`;
     } else {
       // replayed an already-completed day (review)
       emoji = '🎉';
@@ -309,6 +353,17 @@ export function mountDaily(root: HTMLElement): () => void {
     nextBtn?.addEventListener('click', () => openDay(day + 1));
     (controlsEl.querySelector('#daily-calendar') as HTMLButtonElement)
       .addEventListener('click', closeDay);
+
+    // keep the "unlocks in …" countdown ticking while the banner is shown
+    clearCountdown();
+    const cdEl = controlsEl.querySelector('#daily-countdown') as HTMLElement | null;
+    if (cdEl) {
+      countdown = window.setInterval(() => {
+        const ms = msUntilTomorrow();
+        cdEl.textContent = t('daily.unlockIn', { day, time: fmtDuration(ms) });
+        if (ms <= 0) clearCountdown(); // rolled past midnight — it's now earnable
+      }, 30000);
+    }
   }
 
   // ---------- wiring ----------
@@ -325,5 +380,6 @@ export function mountDaily(root: HTMLElement): () => void {
   return () => {
     engine?.dispose();
     clearTimer();
+    clearCountdown();
   };
 }

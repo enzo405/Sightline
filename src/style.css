@@ -1059,6 +1059,7 @@ footer {
   cursor: pointer;
   display: grid;
   place-items: center;
+  row-gap: 3px;
   font-weight: 700;
   font-size: 20px;
   transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease), background var(--ease);
@@ -1072,6 +1073,23 @@ footer {
 
 .cal-day .cal-num {
   line-height: 1;
+}
+
+.cal-date {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.cal-day.done .cal-date,
+.cal-day.current .cal-date {
+  color: var(--ink-2);
+}
+
+.cal-day.locked .cal-date {
+  opacity: 0.8;
 }
 
 .cal-day.done {
