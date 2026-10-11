@@ -67,8 +67,8 @@ export function mountFreePlay(root: HTMLElement): () => void {
   // page opens, released notes should be sustained right away.
   let pedalDown = input.sustainDown();
 
-  // Note-name labels can be switched on/off.
-  let showNames = true;
+  // Note-name labels can be switched on/off — hidden by default.
+  let showNames = false;
   function renderNamesBtn() {
     namesBtn.textContent = showNames ? t('play.namesHide') : t('play.namesShow');
     namesBtn.classList.toggle('off', !showNames);
