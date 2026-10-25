@@ -108,7 +108,36 @@ interface DrawnNote {
   hidden: boolean;
 }
 
-export function renderScore(container: HTMLElement, score: Score, opts: RenderOptions = {}): void {
+/** Scroll so a drawn note stays comfortably on screen (no-op while it already is).
+ *  Measured on the notehead: a whole stavenote group's box can include empty
+ *  sub-groups at the SVG origin, which makes scrollIntoView jump to the top. */
+export function followNote(scoreEl: HTMLElement, noteEl: Element): void {
+  const head = noteEl.querySelector('.vf-notehead') ?? noteEl;
+  const r = head.getBoundingClientRect();
+  let sc: HTMLElement | null = scoreEl.parentElement;
+  while (sc && !(sc.scrollHeight > sc.clientHeight && /(auto|scroll)/.test(getComputedStyle(sc).overflowY))) {
+    sc = sc.parentElement;
+  }
+  if (sc) {
+    const box = sc.getBoundingClientRect();
+    const margin = box.height * 0.2;
+    if (r.top < box.top + margin || r.bottom > box.bottom - margin) {
+      sc.scrollTop += r.top - box.top - box.height * 0.35;
+    }
+  }
+  const paper = scoreEl.getBoundingClientRect();
+  if (r.left < paper.left + 20 || r.right > paper.right - 20) {
+    scoreEl.scrollLeft += r.left - paper.left - paper.width / 3;
+  }
+}
+
+/** SVG groups of the drawn notes, by flat index (rests included) per stave. */
+export interface RenderedNotes {
+  main: (SVGElement | undefined)[];
+  bass: (SVGElement | undefined)[];
+}
+
+export function renderScore(container: HTMLElement, score: Score, opts: RenderOptions = {}): RenderedNotes {
   // Re-rendering wipes the container and reads its layout, which momentarily
   // collapses its height. For a tall/wide score that lets the browser clamp the
   // scroll position of the container and its scrollable ancestors (e.g. the
@@ -137,6 +166,7 @@ export function renderScore(container: HTMLElement, score: Score, opts: RenderOp
   const ctx = renderer.getContext();
 
   const drawnMain: DrawnNote[] = [];
+  const drawnBass: StaveNote[] = [];
   const beams: Beam[] = [];
   let flat = 0;
 
@@ -210,6 +240,8 @@ export function renderScore(container: HTMLElement, score: Score, opts: RenderOp
             }
             drawnMain.push({ vex: sn, tieToNext: !!n.tieToNext && !n.rest, system: sys, hidden });
             flat++;
+          } else {
+            drawnBass.push(sn);
           }
           return sn;
         });
@@ -275,4 +307,7 @@ export function renderScore(container: HTMLElement, score: Score, opts: RenderOp
     s.el.scrollLeft = s.left;
     s.el.scrollTop = s.top;
   }
+
+  const svgOf = (sn: StaveNote) => sn.getSVGElement() as SVGElement | undefined;
+  return { main: drawnMain.map((d) => svgOf(d.vex)), bass: drawnBass.map(svgOf) };
 }

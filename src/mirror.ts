@@ -7,9 +7,9 @@ import { input } from './events';
 import { t } from './i18n';
 import { tutorialHTML } from './tutorial';
 import { Metronome } from './metronome';
-import { renderScore } from './notation';
+import { RenderedNotes, ScoreNote, followNote, renderScore } from './notation';
 import { countNotes } from './progress';
-import { QuantizeResult, RawNote, quantize } from './quantize';
+import { QuantizeResult, RawNote, TimedChord, quantize } from './quantize';
 import { now, pianoOn, unlockAudio } from './synth';
 import {
   Bookmark,
@@ -20,6 +20,23 @@ import {
   loadBookmarks,
   renameBookmark,
 } from './bookmarks';
+
+const SPEEDS = [1, 0.9, 0.75, 0.6, 0.5, 0.4, 0.25];
+const LOOKAHEAD_SEC = 0.25; // how far ahead playback schedules notes
+
+/** Group a stave's flat notes into tie chains: one entry per sounded chord,
+ *  holding the flat indices of every drawn note in that chain. */
+function chordChains(notes: ScoreNote[]): number[][] {
+  const chains: number[][] = [];
+  let open: number[] | null = null;
+  notes.forEach((n, i) => {
+    if (n.rest) { open = null; return; }
+    if (open) open.push(i);
+    else { open = [i]; chains.push(open); }
+    if (!n.tieToNext) open = null;
+  });
+  return chains;
+}
 
 export function mountMirror(root: HTMLElement): () => void {
   root.innerHTML = `
@@ -39,6 +56,11 @@ export function mountMirror(root: HTMLElement): () => void {
       <label class="check"><input type="checkbox" id="mir-click" checked> ${t('mirror.metronome')}</label>
       <button id="mir-rec" class="btn primary">${t('mirror.record')}</button>
       <button id="mir-play" class="btn" disabled>${t('mirror.play')}</button>
+      <label>${t('mirror.speed')}
+        <select id="mir-speed">
+          ${SPEEDS.map((s) => `<option value="${s}"${s === 1 ? ' selected' : ''}>${Math.round(s * 100)}%</option>`).join('')}
+        </select>
+      </label>
       <button id="mir-save" class="btn" disabled>${t('mirror.save')}</button>
       <span id="mir-status" class="status-text">${t('mirror.ready')}</span>
     </div>
@@ -61,6 +83,7 @@ export function mountMirror(root: HTMLElement): () => void {
   const clickEl = root.querySelector('#mir-click') as HTMLInputElement;
   const recBtn = root.querySelector('#mir-rec') as HTMLButtonElement;
   const playBtn = root.querySelector('#mir-play') as HTMLButtonElement;
+  const speedEl = root.querySelector('#mir-speed') as HTMLSelectElement;
   const saveBtn = root.querySelector('#mir-save') as HTMLButtonElement;
   const statusEl = root.querySelector('#mir-status') as HTMLElement;
   const scoreEl = root.querySelector('#mir-score') as HTMLElement;
@@ -76,7 +99,21 @@ export function mountMirror(root: HTMLElement): () => void {
   let result: QuantizeResult | null = null;
   let resultBpm = 90;
   let resultGrid: '8' | '16' = '8';
-  let playTimers: number[] = [];
+  let rendered: RenderedNotes | null = null;
+
+  // Playback: a lookahead scheduler keyed to the audio clock. The anchor maps
+  // audio time <-> score slot, so a speed change re-anchors at the playhead and
+  // takes effect immediately; stopping simply stops scheduling.
+  let playing = false;
+  let speed = 1;
+  let events: TimedChord[] = [];
+  let nextEvent = 0;
+  let endSlot = 0;
+  let anchorTime = 0;
+  let anchorSlot = 0;
+  let schedTimer = 0;
+  let rafId = 0;
+  let lit: SVGElement[] = [];
 
   const unsubOn = input.onNoteOn((e) => {
     if (!recording) return;
@@ -97,11 +134,98 @@ export function mountMirror(root: HTMLElement): () => void {
     return bpm;
   }
 
+  function showScore(r: QuantizeResult) {
+    scoreEl.classList.remove('empty');
+    rendered = renderScore(scoreEl, r.score, { measuresPerLine: 4 });
+  }
+
+  const secPerSlot = () => (result ? result.slotMs / 1000 / speed : 0);
+  const slotAt = (time: number) => anchorSlot + (time - anchorTime) / secPerSlot();
+  const timeOf = (slot: number) => anchorTime + (slot - anchorSlot) * secPerSlot();
+
+  function schedule() {
+    if (!playing) return;
+    const horizon = now() + LOOKAHEAD_SEC;
+    while (nextEvent < events.length && timeOf(events[nextEvent].slot) < horizon) {
+      const ev = events[nextEvent++];
+      const when = Math.max(now(), timeOf(ev.slot));
+      for (const m of ev.midis) pianoOn(m, 95, when, ev.durSlots * secPerSlot());
+    }
+    if (nextEvent >= events.length && slotAt(now()) >= endSlot) stopPlayback();
+  }
+
+  // Per hand: its chords' draw-index groups and the stave they are drawn on.
+  // A single-stave score draws whichever hand it has on the main stave.
+  let tracks: { chords: TimedChord[]; chains: number[][]; els: (SVGElement | undefined)[] }[] = [];
+  function buildTracks(r: QuantizeResult, notes: RenderedNotes) {
+    const ms = r.score.measures;
+    const mainChains = chordChains(ms.flatMap((m) => m.treble));
+    if (r.score.grand) {
+      tracks = [
+        { chords: r.treble, chains: mainChains, els: notes.main },
+        { chords: r.bass, chains: chordChains(ms.flatMap((m) => m.bass ?? [])), els: notes.bass },
+      ];
+    } else {
+      tracks = [{ chords: r.treble.length ? r.treble : r.bass, chains: mainChains, els: notes.main }];
+    }
+  }
+
+  function setLit(next: SVGElement[]) {
+    for (const el of lit) if (!next.includes(el)) el.classList.remove('playing');
+    for (const el of next) el.classList.add('playing');
+    lit = next;
+  }
+
+  function trackPlayhead() {
+    if (!playing) return;
+    const cur = slotAt(now());
+    const next: SVGElement[] = [];
+    for (const tr of tracks) {
+      tr.chords.forEach((c, i) => {
+        if (cur < c.slot || cur >= c.slot + c.durSlots) return;
+        for (const di of tr.chains[i] ?? []) { const el = tr.els[di]; if (el) next.push(el); }
+      });
+    }
+    const first = next[0];
+    if (first && first !== lit[0]) followNote(scoreEl, first);
+    setLit(next);
+    rafId = requestAnimationFrame(trackPlayhead);
+  }
+
+  function startPlayback() {
+    if (!result || !rendered) return;
+    unlockAudio();
+    events = [...result.treble, ...result.bass].sort((a, b) => a.slot - b.slot);
+    endSlot = Math.max(0, ...events.map((e) => e.slot + e.durSlots));
+    buildTracks(result, rendered);
+    nextEvent = 0;
+    anchorSlot = 0;
+    anchorTime = now() + 0.2;
+    playing = true;
+    playBtn.textContent = t('mirror.stopPlay');
+    schedule();
+    schedTimer = window.setInterval(schedule, 50);
+    rafId = requestAnimationFrame(trackPlayhead);
+  }
+
   function stopPlayback() {
-    for (const t of playTimers) clearTimeout(t);
-    playTimers = [];
+    playing = false;
+    clearInterval(schedTimer);
+    cancelAnimationFrame(rafId);
+    setLit([]);
     playBtn.textContent = t('mirror.play');
   }
+
+  speedEl.addEventListener('change', () => {
+    const next = Number(speedEl.value) || 1;
+    if (playing) {
+      // re-anchor at the playhead so the tempo changes without a jump
+      const tNow = Math.max(now(), anchorTime);
+      anchorSlot = slotAt(tNow);
+      anchorTime = tNow;
+    }
+    speed = next;
+  });
 
   function startRecording() {
     unlockAudio();
@@ -135,8 +259,7 @@ export function mountMirror(root: HTMLElement): () => void {
     }
     resultBpm = bpm;
     resultGrid = grid;
-    scoreEl.classList.remove('empty');
-    renderScore(scoreEl, result.score, { measuresPerLine: 4 });
+    showScore(result);
     const bars = result.score.measures.length;
     statusEl.textContent = t('mirror.captured', { n: raw.length, bars, barWord: bars === 1 ? t('mirror.bar') : t('mirror.bars') });
     playBtn.disabled = false;
@@ -146,22 +269,7 @@ export function mountMirror(root: HTMLElement): () => void {
 
   recBtn.addEventListener('click', () => (recording ? stopRecording() : startRecording()));
 
-  playBtn.addEventListener('click', () => {
-    if (!result) return;
-    if (playTimers.length) { stopPlayback(); return; }
-    unlockAudio();
-    const t0 = now() + 0.2;
-    const slotSec = result.slotMs / 1000;
-    let endSlot = 0;
-    for (const chords of [result.treble, result.bass]) {
-      for (const c of chords) {
-        for (const m of c.midis) pianoOn(m, 95, t0 + c.slot * slotSec, c.durSlots * slotSec);
-        endSlot = Math.max(endSlot, c.slot + c.durSlots);
-      }
-    }
-    playBtn.textContent = t('mirror.stopPlay');
-    playTimers.push(window.setTimeout(stopPlayback, (endSlot * slotSec + 0.6) * 1000));
-  });
+  playBtn.addEventListener('click', () => (playing ? stopPlayback() : startPlayback()));
 
   // ---------- bookmarks ----------
   function loadIntoMirror(bm: Bookmark) {
@@ -171,8 +279,7 @@ export function mountMirror(root: HTMLElement): () => void {
     resultGrid = bm.grid;
     bpmEl.value = String(bm.bpm);
     gridEl.value = bm.grid;
-    scoreEl.classList.remove('empty');
-    renderScore(scoreEl, bm.result.score, { measuresPerLine: 4 });
+    showScore(bm.result);
     playBtn.disabled = false;
     saveBtn.disabled = false;
     statusEl.textContent = t('mirror.loaded', { name: bm.name });

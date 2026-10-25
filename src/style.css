@@ -453,6 +453,12 @@ select:focus {
   box-shadow: var(--shadow-2);
 }
 
+/* Mirror playback cursor: notes sounding right now (CSS beats SVG fill attrs) */
+.score-paper .vf-stavenote.playing path,
+.score-paper .vf-stavenote.playing rect {
+  fill: #0284c7;
+  stroke: #0284c7;
+}
 .score-paper.empty {
   display: flex;
   align-items: center;
