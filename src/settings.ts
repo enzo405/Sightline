@@ -9,12 +9,17 @@ export interface Settings {
   volume: number;          // master volume, 0..1
   tone: PianoTone;         // piano timbre (grand / dark / lofi)
   difficulty: Difficulty;  // 30-day journey intensity (beginner / standard / advanced)
+  viewWidth: number;       // main view width as % of the screen (50..100); 0 = default (capped at 1260px)
 }
 
 const STORE_KEY = 'sightline.settings';
 const TONES: PianoTone[] = ['grand', 'dark', 'lofi'];
 const DIFFICULTIES: Difficulty[] = ['beginner', 'standard', 'advanced'];
-const DEFAULTS: Settings = { pianoSound: true, volume: 0.9, tone: 'grand', difficulty: 'standard' };
+const DEFAULTS: Settings = { pianoSound: true, volume: 0.9, tone: 'grand', difficulty: 'standard', viewWidth: 0 };
+
+function clampViewWidth(v: number): number {
+  return v === 0 ? 0 : Math.max(50, Math.min(100, Math.round(v)));
+}
 
 function load(): Settings {
   try {
@@ -26,6 +31,7 @@ function load(): Settings {
         volume: typeof parsed.volume === 'number' ? Math.max(0, Math.min(1, parsed.volume)) : DEFAULTS.volume,
         tone: parsed.tone && TONES.includes(parsed.tone) ? parsed.tone : DEFAULTS.tone,
         difficulty: parsed.difficulty && DIFFICULTIES.includes(parsed.difficulty) ? parsed.difficulty : DEFAULTS.difficulty,
+        viewWidth: typeof parsed.viewWidth === 'number' ? clampViewWidth(parsed.viewWidth) : DEFAULTS.viewWidth,
       };
     }
   } catch {

@@ -59,6 +59,18 @@ export function mountSettings(el: HTMLElement): () => void {
       </section>
 
       <section class="panel">
+        <h3>${t('settings.display')}</h3>
+        <label class="setting-row">
+          <span>
+            ${t('settings.viewWidth')} <strong id="set-width-val"></strong>
+            <small class="muted">${t('settings.viewWidthHint')}</small>
+          </span>
+          <input type="range" id="set-width" min="50" max="100" step="5" value="${s.viewWidth || 100}">
+        </label>
+        <button class="btn" id="set-width-reset">${t('settings.viewWidthDefault')}</button>
+      </section>
+
+      <section class="panel">
         <h3>${t('settings.difficulty')}</h3>
         <p class="muted">${t('settings.difficultyHint')}</p>
         <div class="seg" id="set-diff">
@@ -123,6 +135,26 @@ export function mountSettings(el: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest('button') as HTMLButtonElement | null;
     if (b?.dataset.l === 'en' || b?.dataset.l === 'fr') setLang(b.dataset.l);
     // main.ts re-mounts this tab on language change, so no manual re-render here.
+  });
+
+  // --- main view width (% of screen; 0 = default layout) ---
+  const widthIn = el.querySelector('#set-width') as HTMLInputElement;
+  const widthVal = el.querySelector('#set-width-val') as HTMLElement;
+  const widthReset = el.querySelector('#set-width-reset') as HTMLButtonElement;
+  function renderWidth() {
+    const w = settings().viewWidth;
+    widthVal.textContent = w ? `${w}%` : `(${t('settings.viewWidthAuto')})`;
+    widthReset.disabled = w === 0;
+  }
+  renderWidth();
+  widthIn.addEventListener('input', () => {
+    updateSettings({ viewWidth: Number(widthIn.value) });
+    renderWidth();
+  });
+  widthReset.addEventListener('click', () => {
+    updateSettings({ viewWidth: 0 });
+    widthIn.value = '100';
+    renderWidth();
   });
 
   // --- journey difficulty ---

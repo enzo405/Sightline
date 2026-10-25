@@ -47,6 +47,21 @@ function applyAudioSettings() {
 applyAudioSettings();
 onSettingsChange(applyAudioSettings);
 
+// Main view width: a % of the screen, or the default 1260px-capped layout.
+function applyLayoutSettings() {
+  const w = settings().viewWidth;
+  const st = document.getElementById('view')!.style;
+  if (w > 0) {
+    st.setProperty('--view-width', `${w}%`);
+    st.setProperty('--view-max', 'none');
+  } else {
+    st.removeProperty('--view-width');
+    st.removeProperty('--view-max');
+  }
+}
+applyLayoutSettings();
+onSettingsChange(applyLayoutSettings);
+
 const TABS: { id: string; labelKey: string; mount: (el: HTMLElement) => () => void }[] = [
   { id: 'daily', labelKey: 'tab.daily', mount: mountDaily },
   { id: 'play', labelKey: 'tab.play', mount: mountFreePlay },
