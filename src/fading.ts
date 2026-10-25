@@ -5,8 +5,9 @@
 
 import { t } from './i18n';
 import { tutorialHTML } from './tutorial';
-import { mainStream, renderScore, NoteStatus } from './notation';
+import { followNote, mainStream, renderScore, NoteStatus, Score } from './notation';
 import { pieceScore, PIECES, pieceTitle } from './pieces';
+import { importBookmarksJSON, loadBookmarks } from './bookmarks';
 import { ETUDE_IDS, generateEtude, isEtude } from './etudes';
 import { countNotes, progress, save } from './progress';
 import { PlayThrough } from './playthrough';
@@ -34,6 +35,36 @@ export const FADE_LEVELS: FadeLevel[] = [
   },
 ];
 
+// Imported / saved Mirror pieces show up here too, keyed "bm:<bookmark id>".
+const BM_PREFIX = 'bm:';
+
+function escapeHtml(s: string): string {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function pieceOptions(): string {
+  const bms = loadBookmarks();
+  return `
+    ${PIECES.map((p) => `<option value="${p.id}">${pieceTitle(p.id)}</option>`).join('')}
+    <optgroup label="${t('fade.etudeGroup')}">
+      ${ETUDE_IDS.map((id) => `<option value="${id}">${t(`piece.${id}`)}</option>`).join('')}
+    </optgroup>
+    ${bms.length ? `<optgroup label="${t('fade.myPieces')}">
+      ${bms.map((b) => `<option value="${BM_PREFIX}${b.id}">${escapeHtml(b.name)}</option>`).join('')}
+    </optgroup>` : ''}
+  `;
+}
+
+function scoreFor(id: string): Score | null {
+  if (id.startsWith(BM_PREFIX)) {
+    const bm = loadBookmarks().find((b) => b.id === id.slice(BM_PREFIX.length));
+    return bm ? bm.result.score : null;
+  }
+  return isEtude(id) ? generateEtude(id) : pieceScore(id);
+}
+
 export function mountFading(root: HTMLElement): () => void {
   root.innerHTML = `
     <div class="feature-intro">
@@ -43,13 +74,10 @@ export function mountFading(root: HTMLElement): () => void {
     </div>
     <div class="toolbar">
       <label>${t('fade.piece')}
-        <select id="fd-piece">
-          ${PIECES.map((p) => `<option value="${p.id}">${pieceTitle(p.id)}</option>`).join('')}
-          <optgroup label="${t('fade.etudeGroup')}">
-            ${ETUDE_IDS.map((id) => `<option value="${id}">${t(`piece.${id}`)}</option>`).join('')}
-          </optgroup>
-        </select>
+        <select id="fd-piece">${pieceOptions()}</select>
       </label>
+      <button id="fd-import" class="btn ghost" title="${t('fade.importHint')}">${t('mirror.import')}</button>
+      <input type="file" id="fd-import-file" accept="application/json,.json" hidden>
       <span class="level-badge">${t('fade.stage')} <b id="fd-level"></b>/5</span>
       <button id="fd-restart" class="btn primary">${t('fade.restart')}</button>
       <span id="fd-live" class="status-text"></span>
@@ -76,10 +104,15 @@ export function mountFading(root: HTMLElement): () => void {
   function start() {
     engine?.dispose();
     resultsEl.classList.add('hidden');
-    const id = pieceEl.value;
+    let id = pieceEl.value;
+    let score = scoreFor(id);
+    if (!score) { // bookmark deleted since — fall back to the first piece
+      pieceEl.selectedIndex = 0;
+      id = pieceEl.value;
+      score = scoreFor(id)!;
+    }
     const lvlIdx = pieceLevel(id);
     const fade = FADE_LEVELS[lvlIdx];
-    const score = isEtude(id) ? generateEtude(id) : pieceScore(id);
     const hidden = fade.hide(score.measures.length);
     levelEl.textContent = String(lvlIdx + 1);
     descEl.textContent = t(fade.labelKey);
@@ -87,19 +120,22 @@ export function mountFading(root: HTMLElement): () => void {
     const stream = mainStream(score);
     liveEl.textContent = t('read.noteCount', { n: 1, total: stream.length });
 
-    const rerender = (statuses: Map<number, NoteStatus>) => {
-      renderScore(scoreEl, score, {
+    const rerender = (statuses: Map<number, NoteStatus>, pos: number) => {
+      const drawn = renderScore(scoreEl, score!, {
         statuses,
         showNames: fade.showNames,
         showFingering: fade.showFingering,
         hiddenMeasures: hidden,
         measuresPerLine: 4,
       });
+      // long pieces: keep the cursor note on screen
+      const cur = stream[pos] && drawn.main[stream[pos].drawIndices[0]];
+      if (cur) followNote(scoreEl, cur);
     };
 
     engine = new PlayThrough(stream, {
       onUpdate: (statuses, pos) => {
-        rerender(statuses);
+        rerender(statuses, pos);
         if (pos < stream.length) liveEl.textContent = t('read.noteCount', { n: pos + 1, total: stream.length });
       },
       onComplete: (res) => {
@@ -133,6 +169,33 @@ export function mountFading(root: HTMLElement): () => void {
 
   pieceEl.addEventListener('change', start);
   restartBtn.addEventListener('click', start);
+
+  // Import a bookmarks/score JSON (same format as the Mirror) and select it.
+  const importBtn = root.querySelector('#fd-import') as HTMLButtonElement;
+  const importFile = root.querySelector('#fd-import-file') as HTMLInputElement;
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const file = importFile.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const before = new Set(loadBookmarks().map((b) => b.id));
+        const res = importBookmarksJSON(String(reader.result));
+        const added = loadBookmarks().find((b) => !before.has(b.id));
+        pieceEl.innerHTML = pieceOptions();
+        if (added) {
+          pieceEl.value = BM_PREFIX + added.id;
+          start();
+        }
+        liveEl.textContent = t('mirror.imported', { added: res.added, skipped: res.skipped });
+      } catch {
+        liveEl.textContent = t('mirror.importError');
+      }
+      importFile.value = '';
+    };
+    reader.readAsText(file);
+  });
   start();
 
   return () => engine?.dispose();
