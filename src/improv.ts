@@ -49,6 +49,9 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
       <strong>${t('improv.playableNotes')}</strong>
       <span class="improv-note-guide-item"><span class="improv-note-swatch chord"></span>${t('improv.chordToneGuide')}</span>
       <span class="improv-note-guide-item"><span class="improv-note-swatch scale"></span>${t('improv.scaleToneGuide')}</span>
+      <span class="improv-note-guide-item"><span class="improv-note-swatch left"></span>${t('improv.leftHand')}</span>
+      <span class="improv-note-guide-item"><span class="improv-note-swatch right"></span>${t('improv.rightHand')}</span>
+      <span class="improv-note-guide-item"><span class="improv-note-swatch both"></span>${t('improv.bothHands')}</span>
     </div>
     <div id="im-timeline" class="chord-timeline"></div>
     <div class="improv-grid">
@@ -107,9 +110,27 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
   let drill: { phrase: number[]; got: number[]; round: number; correct: number; listening: boolean } | null = null;
   let drillTimers: number[] = [];
 
+  function bassNotes(chord: ChordInfo): number[] {
+    const bass = midiFromPc(chord.rootPc, 2);
+    return [bass, bass + 7];
+  }
+
+  function chordVoicing(chord: ChordInfo): number[] {
+    return chord.tones.map((pc) => midiFromPc(pc, pc < chord.rootPc ? 4 : 3)).sort((a, b) => a - b);
+  }
+
   function renderTimeline() {
     timelineEl.innerHTML = prog.chords
-      .map((c, i) => `<div class="chord-chip${i === chordIdx ? ' active' : ''}" data-i="${i}">${chordName(c)}</div>`)
+      .map((symbol, i) => {
+        const chord = chords[i];
+        const leftNotes = bassNotes(chord).map((midi) => noteName(midi)).join(' · ');
+        const rightNotes = chordVoicing(chord).map((midi) => noteName(midi)).join(' · ');
+        return `<div class="chord-chip${i === chordIdx ? ' active' : ''}" data-i="${i}">
+          <strong class="chord-name">${chordName(symbol)}</strong>
+          <span class="chord-hand left"><span class="chord-hand-label">${t('improv.leftHand')}</span>${leftNotes}</span>
+          <span class="chord-hand right"><span class="chord-hand-label">${t('improv.rightHand')}</span>${rightNotes}</span>
+        </div>`;
+      })
       .join('');
   }
 
@@ -123,6 +144,12 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
     for (let m = 36; m <= 96; m++) {
       if (c.tones.includes(m % 12)) map.set(m, 'hl-chord');
       else if (c.scale.includes(m % 12)) map.set(m, 'hl-scale');
+    }
+    for (const midi of bassNotes(c)) {
+      map.set(midi, map.get(midi) === 'hl-right' ? 'hl-both' : 'hl-left');
+    }
+    for (const midi of chordVoicing(c)) {
+      map.set(midi, map.get(midi) === 'hl-left' ? 'hl-both' : 'hl-right');
     }
     keyboard.setHighlights(map);
   }
@@ -199,12 +226,11 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
   // ---------- backing track ----------
   function scheduleBar(barIdx: number, when: number, barSec: number) {
     const c = chords[barIdx % chords.length];
-    const bass = midiFromPc(c.rootPc, 2);
-    const fifth = bass + 7;
+    const [bass, fifth] = bassNotes(c);
     const beat = barSec / 4;
     bassNote(bass, when, beat * 1.8);
     bassNote(fifth, when + beat * 2, beat * 1.8);
-    const voicing = c.tones.map((pc) => midiFromPc(pc, pc < c.rootPc ? 4 : 3)).sort((a, b) => a - b);
+    const voicing = chordVoicing(c);
     padChord(voicing, when, barSec * 0.98);
     for (let b = 0; b < 4; b++) hat(when + beat * b);
     const delay = Math.max(0, (when - now()) * 1000);
