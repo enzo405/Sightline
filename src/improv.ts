@@ -45,6 +45,11 @@ export function mountImprov(root: HTMLElement, keyboard: Keyboard): () => void {
       <label>${t('improv.tempo')} <input type="number" id="im-bpm" min="50" max="180" value="100" class="num"> ${t('improv.bpm')}</label>
       <button id="im-start" class="btn primary">${t('improv.start')}</button>
     </div>
+    <div class="improv-note-guide" role="note">
+      <strong>${t('improv.playableNotes')}</strong>
+      <span class="improv-note-guide-item"><span class="improv-note-swatch chord"></span>${t('improv.chordToneGuide')}</span>
+      <span class="improv-note-guide-item"><span class="improv-note-swatch scale"></span>${t('improv.scaleToneGuide')}</span>
+    </div>
     <div id="im-timeline" class="chord-timeline"></div>
     <div class="improv-grid">
       <div class="panel">
